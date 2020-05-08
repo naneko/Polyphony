@@ -1,5 +1,4 @@
 {
-    "python.pythonPath": "~/.local/share/virtualenvs/Polyphony-2dG3DZlt/bin/python",
     "python.formatting.provider": "black",
     "autoDocstring.docstringFormat": "sphinx",
     "python.linting.pydocstyleEnabled": true,
