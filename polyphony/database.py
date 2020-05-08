@@ -15,8 +15,8 @@ c = conn.cursor()
 
 def init_db():
     """Initialize database tables from schema.sql."""
-    with open('./schema.sql', 'r') as schema_file:
+    with open("./schema.sql", "r") as schema_file:
         schema = schema_file.read()
 
     c.executescript(schema)
-    logging.debug('Database initialized from schema.sqlite')
+    logging.debug("Database initialized from schema.sqlite")

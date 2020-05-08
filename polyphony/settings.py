@@ -10,9 +10,10 @@ import os
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
-    logging.debug("python-dotenv not loaded. Hope you set your enviroment variables.")
+    logging.debug("python-dotenv not loaded. Hope you set your environment variables.")
 
 # TODO: Logging configuration
 

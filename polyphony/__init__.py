@@ -15,7 +15,7 @@ class Polyphony(discord.Client):
 
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
-        logging.info(f'Polyphony started as {self.user}')
+        logging.info(f"Polyphony started as {self.user}")
 
 
 client = Polyphony()
