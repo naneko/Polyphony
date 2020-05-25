@@ -41,6 +41,8 @@ async def on_ready():
     if len(members) == 0:
         log.debug("No members found")
     for member in members:
+        if not member.get("member_enabled"):
+            continue
         new_instance = PolyphonyInstance(member)
         thread = threading.Thread(
             target=new_instance.run, args=member.get("token"), daemon=True
