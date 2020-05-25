@@ -1,3 +1,0 @@
-"""
-Polyphony Core Commands
-"""

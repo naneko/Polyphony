@@ -1,5 +1,12 @@
 PRAGMA foreign_keys = ON;
 
+-- Schema Version 0
+
+-- Database Metadata
+CREATE TABLE IF NOT EXISTS meta (
+    version INTEGER PRIMARY KEY
+);
+
 -- Stores Polyphony Users
 CREATE TABLE IF NOT EXISTS users (
     discord_account_id  INTEGER PRIMARY KEY
@@ -17,13 +24,13 @@ CREATE TABLE IF NOT EXISTS members (
     pk_proxy_tags       BLOB    NOT NULL,
     pk_keep_proxy       INT     NOT NULL CHECK(pk_keep_proxy == 1 OR pk_keep_proxy == 0), -- BOOL
     member_enabled      INT     NOT NULL CHECK(pk_keep_proxy == 1 OR pk_keep_proxy == 0), -- BOOL
-    
+
     FOREIGN KEY(discord_account_id) REFERENCES users(discord_account_id)
     FOREIGN KEY(token) REFERENCES tokens(token)
 );
 
--- All Availible Tokens
+-- All Available Tokens
 CREATE TABLE IF NOT EXISTS tokens (
     token               TEXT    PRIMARY KEY,
     used                INT     NOT NULL CHECK(used == 1 OR used == 0) -- BOOL
-)
+);
