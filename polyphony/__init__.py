@@ -4,6 +4,7 @@ Polyphony: A more robust version of PluralKit.
 Created for The Valley discord server
 """
 import logging
+import sqlite3
 import threading
 from typing import List
 
@@ -41,17 +42,25 @@ async def on_ready():
     if len(members) == 0:
         log.debug("No members found")
     for member in members:
-        if not member.get("member_enabled"):
-            continue
-        new_instance = PolyphonyInstance(member)
-        thread = threading.Thread(
-            target=new_instance.run, args=member.get("token"), daemon=True
-        )
-        instances.append({"thread": thread, "instance": member})
-        thread.start()
+        create_member_instance(member)
     log.debug("Member initialization complete.")
 
     log.info(f"Polyphony started as {bot.user}")
+
+
+def create_member_instance(member: sqlite3.Row):
+    """
+    Create member instance threads from dictionary that is returned from database
+    :param member: directory that is returned from database functions
+    """
+    if not dict(member).get("member_enabled"):
+        pass
+    new_instance = PolyphonyInstance(dict(member))
+    thread = threading.Thread(
+        target=new_instance.run, args=[dict(member).get("token")], daemon=True
+    )
+    instances.append({"thread": thread, "instance": member})
+    thread.start()
 
 
 # Load extensions

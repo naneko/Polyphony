@@ -9,8 +9,10 @@ log = logging.getLogger("polyphony." + __name__)
 
 
 class Admin(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.bot):
         self.bot = bot
+
+    # TODO: Add unimplemented method definitions
 
 
 def setup(bot: commands.bot):
