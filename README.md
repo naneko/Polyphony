@@ -9,6 +9,10 @@ Create a `.env` file to set your environment variables. Polyphony takes all of i
 - `DATABASE_URI` - Location of the SQLite database ([See more info here](https://docs.python.org/3/library/sqlite3.html))
 - `MESSAGE_CACHE_SIZE` - How many recent messages are stored in memory for each instance (only message IDs are stored)
 
+Package management is done using [Pipenv](https://pipenv.pypa.io/en/latest/). Install pipenv and then run `pipenv install` in the project root. This project was built on Python 3.8.2.
+
+To run, just run `__init__.py` in the Polyphony package.
+
 # Contributing
 Do it right the first time and follow these guidelines.
 
