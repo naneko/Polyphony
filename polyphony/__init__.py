@@ -55,7 +55,16 @@ def create_member_instance(member: sqlite3.Row):
     """
     if not dict(member).get("member_enabled"):
         pass
-    new_instance = PolyphonyInstance(dict(member))
+    member: dict = dict(member)
+    log.debug(f"Creating member instance {member}")
+    new_instance = PolyphonyInstance(
+        member["pk_member_id"],
+        member["discord_account_id"],
+        member["member_name"],
+        member["display_name"],
+        member["pk_avatar_url"],
+        member["pk_proxy_tags"],
+    )
     thread = threading.Thread(
         target=new_instance.run, args=[dict(member).get("token")], daemon=True
     )
