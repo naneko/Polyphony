@@ -19,37 +19,54 @@ class User(commands.Cog):
     @commands.command()
     @is_polyphony_user()
     async def sync(self, ctx: commands.context):
-        pass
+        """
+        Sync system members with PluralKit
+
+        :param ctx: Discord Context
+        """
+        # TODO: Implement
+        ctx.send("Sync command unimplemented")
+        log.warning("Sync command unimplemented")
 
     @commands.command()
     @is_polyphony_user()
     async def nick(
         self, ctx: commands.context, system_member: discord.Member, *, nickname: str
     ):
-        pass
+        """
+        !p nick: Set system member nickname
+
+        :param ctx: Discord Context
+        :param system_member: System Member Mention
+        :param nickname: Nickname
+        """
+        # TODO: Implement
+        ctx.send("Nick command unimplemented")
+        log.warning("Nick command unimplemented")
 
     @commands.command()
     @is_polyphony_user(allow_mods=True)
     async def ping(self, ctx: commands.context):
         """
-        Pings the core bot
+        !p ping: Pings the core bot
 
         TODO: Also ping all system member instances for the given user
 
-        :param ctx:
-        :return:
+        :param ctx: Discord Context
         """
         await ctx.send(embed=discord.Embed(title=f"Pong ({self.bot.latency} ms)"))
 
     @commands.command()
-    @is_polyphony_user()
+    @is_polyphony_user(allow_mods=True)
     async def listroles(self, ctx: commands.context):
         """
         !p listroles: Lists available roles and their IDs
 
         :param ctx: Discord Context
         """
-        pass
+        # TODO: Implement
+        ctx.send("Listroles command unimplemented")
+        log.warning("Listroles command unimplemented")
 
     @commands.command()
     @is_polyphony_user()
@@ -68,7 +85,8 @@ class User(commands.Cog):
         :param system_member: A system member bot user
         """
         # TODO: Implement
-        pass
+        ctx.send("Role command unimplemented")
+        log.warning("Role command unimplemented")
 
     @commands.command()
     @is_polyphony_user()
@@ -80,7 +98,8 @@ class User(commands.Cog):
         :param message: Message Content
         """
         # TODO: Implement
-        pass
+        ctx.send("Edit command unimplemented")
+        log.warning("Edit command unimplemented")
 
     @commands.command()
     @is_polyphony_user()
@@ -95,7 +114,8 @@ class User(commands.Cog):
         :param message: Message Content
         """
         # TODO: Implement
-        pass
+        ctx.send("Editid command unimplemented")
+        log.warning("Editid command unimplemented")
 
     @commands.command(name="del")
     @is_polyphony_user()
@@ -107,7 +127,8 @@ class User(commands.Cog):
         :param message_id: ID of message to delete
         """
         # TODO: Implement
-        pass
+        ctx.send("Delete command unimplemented")
+        log.warning("Delete command unimplemented")
 
 
 def setup(bot):
