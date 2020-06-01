@@ -7,7 +7,7 @@ from typing import Union, List
 import discord
 from discord.ext import commands
 
-from polyphony.helpers.checks import is_mod
+from helpers.checks import is_mod
 
 log = logging.getLogger("polyphony." + __name__)
 

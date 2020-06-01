@@ -9,7 +9,7 @@ import pathlib
 import sqlite3
 from typing import List, Tuple
 
-from polyphony.settings import DATABASE_URI
+from settings import DATABASE_URI
 
 conn = sqlite3.connect(DATABASE_URI)
 c = conn.cursor()

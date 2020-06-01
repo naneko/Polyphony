@@ -7,7 +7,7 @@ from typing import List, Literal
 import discord
 from discord.ext import commands
 
-from polyphony.helpers.checks import is_polyphony_user
+from helpers.checks import is_polyphony_user
 
 log = logging.getLogger("polyphony." + __name__)
 

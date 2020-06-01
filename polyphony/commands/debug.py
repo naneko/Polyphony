@@ -6,7 +6,7 @@ import pprint
 
 from discord.ext import commands
 
-from polyphony.helpers.pluralkit import pk_get_system, pk_get_system_members, pk_get_member
+from helpers.pluralkit import pk_get_system, pk_get_system_members, pk_get_member
 
 log = logging.getLogger("polyphony." + __name__)
 

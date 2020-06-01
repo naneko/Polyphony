@@ -11,9 +11,9 @@ from typing import List
 import discord
 from discord.ext import commands
 
-from polyphony.instance import PolyphonyInstance
-from polyphony.helpers.database import get_members, init_db
-from polyphony.settings import TOKEN, DEBUG
+from instance import PolyphonyInstance
+from helpers.database import get_members, init_db
+from settings import TOKEN, DEBUG
 
 log = logging.getLogger(__name__)
 
