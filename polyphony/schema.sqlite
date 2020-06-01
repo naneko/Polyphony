@@ -39,5 +39,5 @@ CREATE TABLE IF NOT EXISTS tokens (
 CREATE TABLE IF NOT EXISTS roles (
     role_name           TEXT    NOT NULL UNIQUE,
     role_id             TEXT    PRIMARY KEY,
-    index               INT     NOT NULL
+    id                  INT     NOT NULL -- Determines order in list
 );
