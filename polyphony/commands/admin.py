@@ -25,10 +25,10 @@ class Admin(commands.Cog):
         arg2: discord.Member = None,
     ):
         """
-        !p list: Shows all active Polyphony members sorted by main account
-        !p list inactive: Shows systems and main accounts that haven’t been used in n number of days defined in the config or at all or where the main user has left the server
-        !p list [main account]: Lists all polyphony system members for a given main account
-        !p list all [main account]: Lists all PluralKit system members for a given main account
+        p! list: Shows all active Polyphony members sorted by main account
+        p! list inactive: Shows systems and main accounts that haven’t been used in n number of days defined in the config or at all or where the main user has left the server
+        p! list [main account]: Lists all polyphony system members for a given main account
+        p! list all [main account]: Lists all PluralKit system members for a given main account
 
         TODO: Add configuration option for auto-disable inactive users
 
@@ -37,7 +37,7 @@ class Admin(commands.Cog):
         :param arg2: None/Discord Account
         """
         # TODO: Implement
-        ctx.send("Sync command unimplemented")
+        await ctx.send("Sync command unimplemented")
         log.warning("Sync command unimplemented")
 
     @commands.command()
@@ -50,7 +50,7 @@ class Admin(commands.Cog):
         bot_token: str = None,
     ):
         """
-        !p extend [main account] [pk system or member id] (bot token): Creates a new Polyphony member instance and show invite link for bot
+        p! extend [main account] [pk system or member id] (bot token): Creates a new Polyphony member instance and show invite link for bot
 
         Using a system ID will attempt to create a bot for all system members using the token queue. Will fail immediately if the queue is too short.
 
@@ -70,40 +70,40 @@ class Admin(commands.Cog):
         :param bot_token: Bot token to use to create the instance (optional)
         """
         # TODO: Implement
-        ctx.send("Sync command unimplemented")
+        await ctx.send("Sync command unimplemented")
         log.warning("Sync command unimplemented")
 
     @commands.command()
     @is_mod()
     async def suspend(self, ctx: commands.context, system_member: discord.Member):
         """
-        !p suspend [system member]: Sets member_enabled to false. Pulls the member instance offline.
+        p! suspend [system member]: Sets member_enabled to false. Pulls the member instance offline.
 
         :param ctx: Discord Context
         :param system_member: System Member
         """
         # TODO: Implement
-        ctx.send("Sync command unimplemented")
+        await ctx.send("Sync command unimplemented")
         log.warning("Sync command unimplemented")
 
     @commands.command()
     @is_mod()
     async def disable(self, ctx: commands.context, system_member: discord.Member):
         """
-        !p disable [system member]: Disables a system member by deleting it from the database and kicking it from the server. Bot token cannot be reused.
+        p! disable [system member]: Disables a system member by deleting it from the database and kicking it from the server. Bot token cannot be reused.
 
         :param ctx: Discord Context
         :param system_member: System Member
         """
         # TODO: Implement
-        ctx.send("Sync command unimplemented")
+        await ctx.send("Sync command unimplemented")
         log.warning("Sync command unimplemented")
 
     @commands.command()
     @is_mod()
     async def queue(self, ctx: commands.context, *tokens: List[str]):
         """
-        !p queue [bot token] (bot token)...: Queues bot tokens for usage
+        p! queue [bot token] (bot token)...: Queues bot tokens for usage
 
         Checks tokens are valid
 
@@ -112,27 +112,27 @@ class Admin(commands.Cog):
         :return:
         """
         # TODO: Implement
-        ctx.send("Sync command unimplemented")
+        await ctx.send("Sync command unimplemented")
         log.warning("Sync command unimplemented")
 
     @commands.command()
     @is_mod()
     async def manageroles(self, ctx: commands.context, action: str, *roles: List[str]):
         """
-        !p manageroles add/remove [role id(:index)] (role id(:index))...: Allows/disallows a role to be assigned to a Polyphony system member.
+        p! manageroles add/remove [role id(:index)] (role id(:index))...: Allows/disallows a role to be assigned to a Polyphony system member.
 
-        !p remove all: Remove all options from list
+        p! remove all: Remove all options from list
 
         Index will determine the order the roles are inserted into the list (defaults to end of list).
 
-        !p remove does not unassign roles
+        p! remove does not unassign roles
 
         :param ctx: Discord Context
         :param action: add/remove
         :param roles: role id(:index) (index is optional)
         """
         # TODO: Implement
-        ctx.send("Sync command unimplemented")
+        await ctx.send("Sync command unimplemented")
         log.warning("Sync command unimplemented")
 
 
