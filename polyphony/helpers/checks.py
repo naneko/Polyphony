@@ -5,7 +5,7 @@ import logging
 
 from discord.ext import commands
 
-from .database import get_users
+from helpers.database import get_users
 from polyphony.settings import MODERATOR_ROLES
 
 log = logging.getLogger(__name__)

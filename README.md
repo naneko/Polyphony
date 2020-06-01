@@ -11,7 +11,7 @@ Create a `.env` file to set your environment variables. Polyphony takes all of i
 
 Package management is done using [Pipenv](https://pipenv.pypa.io/en/latest/). Install pipenv and then run `pipenv install` in the project root. This project was built on Python 3.8.2.
 
-To run, just run `__init__.py` in the Polyphony package.
+To run, just run `python -m polyphony` in the Polyphony package root.
 
 # Contributing
 Do it right the first time and follow these guidelines.
