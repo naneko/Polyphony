@@ -2,58 +2,58 @@
 Functions that pull data from the PluralKit API.
 """
 import logging
-import urllib.request
+from typing import Union, List
+from urllib import request, error
 import json
 
 log = logging.getLogger(__name__)
 
-""" Pulls system information from PluralKit API and returns it as dict """
 
+async def pk_get_system(system_id: str) -> Union[dict, None]:
+    """
+    Gets a PluralKit system
 
-async def pk_get_system(system):
-    log.debug("Collecting system data from PluralKit API...")
+    :param system_id: PluralKit System ID
+    :return: (dict) https://app.swaggerhub.com/apis-docs/xSke/PluralKit/1.0#/Systems/GetSystem
+    """
+    log.debug(f"Getting system {system_id}")
     try:
-        with urllib.request.urlopen("https://api.pluralkit.me/v1/s/" + system) as url:
-            system_data = json.loads(url.read().decode())
-        return system_data
-    except urllib.error.URLError as e: response_data = e.reason
-    except urllib.error.HTTPError as e: response_data = e.reason
-    log.warning("Urllib Error: Unable to collect system data from PluralKit API")
-    return None
-
-""" Pulls Member information from PluralKit API and returns it as dict """
+        with request.urlopen(f"https://api.pluralkit.me/v1/s/{system_id}") as url:
+            return json.loads(url.read().decode())
+    except error.URLError as e:
+        log.warning(f"Failed to get system {system_id} ({e})")
+        return None
 
 
-async def pk_get_member(system):
-    log.debug("Collecting member data from PluralKit API...")
+async def pk_get_system_members(system_id: str) -> Union[List[dict], None]:
+    """
+    Gets all members of a PluralKit system
+
+    :param system_id: PluralKit System ID
+    :return: (dict) https://app.swaggerhub.com/apis-docs/xSke/PluralKit/1.0#/Members/GetSystemMembers
+    """
+    log.debug(f"Getting system members of {system_id}")
     try:
-        with urllib.request.urlopen("https://api.pluralkit.me/v1/s/" + system + "/members") as url:
-            members_data = json.loads(url.read().decode())
-            member_list = []
+        with request.urlopen(
+            f"https://api.pluralkit.me/v1/s/{system_id}/members"
+        ) as url:
+            return json.loads(url.read().decode())
+    except error.URLError as e:
+        log.warning(f"Failed to get members of system {system_id} ({e})")
+        return None
 
-        for item in members_data:
-            try:
-                member_details = {"id": item['id'],
-                                  "name": item['name'],
-                                  "color": item['color'],
-                                  "display_name": item['display_name'],
-                                  "birthday": item['birthday'],
-                                  "pronouns": item['pronouns'],
-                                  "avatar_url": item['avatar_url'],
-                                  "description": item['description'],
-                                  "privacy": item['privacy'],
-                                  "proxy_tags": item['proxy_tags'],
-                                  "keep_proxy": item['keep_proxy'],
-                                  "created": item['created'],
-                                  "prefix": item['prefix'],
-                                  "suffix": item['suffix']}
-                member_list.append(member_details)
-            except KeyError:
-                return None  # or "continue" if this is inside a loop
 
-        return member_list
+async def pk_get_member(member_id: str) -> Union[dict, None]:
+    """
+    Get PluralKit member by ID
 
-    except urllib.error.URLError as e: response_data = e.reason
-    except urllib.error.HTTPError as e: response_data = e.reason
-    log.warning("Urllib Error: Unable to collect member data from PluralKit API")
-    return None
+    :param member_id: PluralKit Member ID
+    :return: (dict) https://app.swaggerhub.com/apis-docs/xSke/PluralKit/1.0#/Members/GetMember
+    """
+    log.debug(f"Getting member {member_id}")
+    try:
+        with request.urlopen(f"https://api.pluralkit.me/v1/m/{member_id}") as url:
+            return json.loads(url.read().decode())
+    except error.URLError as e:
+        log.warning(f"Failed to get members of system {member_id} ({e})")
+        return None

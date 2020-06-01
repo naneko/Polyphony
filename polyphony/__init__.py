@@ -65,6 +65,9 @@ def create_member_instance(member: sqlite3.Row):
 
 # Load extensions
 log.debug("Loading default extensions...")
+if DEBUG:
+    log.info("=== DEBUG MODE ENABLED ===")
+    init_extensions.append("commands.debug")
 for ext in init_extensions:
     log.debug(f"Loading {ext}...")
     bot.load_extension(ext)
