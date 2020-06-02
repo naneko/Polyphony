@@ -19,7 +19,18 @@ Dependency, testing, and build management is done using [Poetry](https://python-
 To run polyphony, use `poetry run polyphony`.
 
 # Contributing
-Do it right the first time and follow these guidelines.
+Help us build Polyphony!
+
+## How to Contribute Code
+1. Fork your own branch
+2. Push your branch to GitHub
+3. Create a *draft* pull request (yes, do this before writing any code)
+  - Make sure to thoroughly describe your goals/changes/additions
+  - Check projects to see if someone is already working on that feature
+  - Check issues to make sure someone isn't already fixing that problem
+4. Write your code
+5. Commit and Push updates
+6. Mark your pull request as ready for review
 
 ## Style Guide
 - Code is formatted using Black.
