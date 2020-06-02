@@ -6,9 +6,9 @@ from typing import List
 import discord
 from discord.ext import commands
 
-from .instance.bot import PolyphonyInstance
-from .helpers.database import get_members, init_db
-from .settings import TOKEN, DEBUG
+from polyphony.instance import PolyphonyInstance
+from polyphony.helpers.database import get_members, init_db
+from polyphony.settings import TOKEN, DEBUG
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +50,16 @@ def create_member_instance(member: sqlite3.Row):
     """
     if not dict(member).get("member_enabled"):
         pass
-    new_instance = PolyphonyInstance(dict(member))
+    member: dict = dict(member)
+    log.debug(f"Creating member instance {member}")
+    new_instance = PolyphonyInstance(
+        member["pk_member_id"],
+        member["discord_account_id"],
+        member["member_name"],
+        member["display_name"],
+        member["pk_avatar_url"],
+        member["pk_proxy_tags"],
+    )
     thread = threading.Thread(
         target=new_instance.run, args=[dict(member).get("token")], daemon=True
     )
@@ -60,9 +69,6 @@ def create_member_instance(member: sqlite3.Row):
 
 # Load extensions
 log.debug("Loading default extensions...")
-if DEBUG:
-    log.info("=== DEBUG MODE ENABLED ===")
-    init_extensions.append("commands.debug")
 for ext in init_extensions:
     log.debug(f"Loading {ext}...")
     bot.load_extension(ext)
