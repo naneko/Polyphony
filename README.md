@@ -24,7 +24,7 @@ Help us build Polyphony!
 ## How to Contribute Code
 1. Fork your own branch
 2. Push your branch to GitHub
-3. Create a *draft* pull request (yes, do this before writing any code)
+3. Create a *draft* pull request or create an issue from a project card (yes, do this before writing any code)
   > Make sure to thoroughly describe your goals/changes/additions
   >
   > Check projects to see if someone is already working on that feature
