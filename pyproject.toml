@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "Polyphony"
+version = "0.1.0"
+description = "A more robust version of PluralKit"
+authors = []
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+discord-py = "~1.3.3"
+python-dotenv = "^0.13.0"
+
+[tool.poetry.dev-dependencies]
+black = "^19.10b0"
+flake8 = "^3.8.2"
+pydocstyle = "^5.0.2"
+jedi = "^0.17.0"
+mypy = "^0.770"
+
+[tool.poetry.scripts]
+polyphony = "polyphony:main"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
