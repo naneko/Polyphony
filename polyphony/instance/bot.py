@@ -7,6 +7,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class PolyphonyInstance(discord.Client):
     """Polyphony Member Instance."""
 
