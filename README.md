@@ -2,16 +2,21 @@
 A more robust implementation of PluralKit that hooks into the PluralKit API
 
 # How to Run
-Create a `.env` file to set your environment variables. Polyphony takes all of it's configuration in the form of environment variables.
+Create a `.env` file in the project root to set your environment variables. Polyphony takes all of it's configuration in the form of environment variables.
 
 - `DEBUG` - Python Boolean, Activates Debug Mode
 - `TOKEN` - Discord Bot Token
 - `DATABASE_URI` - Location of the SQLite database ([See more info here](https://docs.python.org/3/library/sqlite3.html))
-- `MESSAGE_CACHE_SIZE` - How many recent messages are stored in memory for each instance (only message IDs are stored)
+- `MESSAGE_CACHE_SIZE` - How many recent messages are stored in memory for each instance (only message IDs are stored) <!--TODO: The API contains a message cache already so this may be deprecated-->
+- `MODERATOR_ROLES` - List of role names (default: "Moderator")
 
-Package management is done using [Pipenv](https://pipenv.pypa.io/en/latest/). Install pipenv and then run `pipenv install` in the project root. This project was built on Python 3.8.2.
+This project was built on Python 3.8.2.
 
-To run, just run `__init__.py` in the Polyphony package.
+Dependency, testing, and build management is done using [Poetry](https://python-poetry.org/). Install Poetry on your system and then run `poetry install` in the project root.
+
+> Pipenv will be deprecated
+
+To run polyphony, use `poetry run polyphony`.
 
 # Contributing
 Do it right the first time and follow these guidelines.
