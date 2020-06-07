@@ -51,7 +51,9 @@ def create_member_instance(member: sqlite3.Row):
     """
     if not member["member_enabled"]:
         pass
-    log.debug(f"Creating member instance {member['member_name']} ({member['pk_member_id']})")
+    log.debug(
+        f"Creating member instance {member['member_name']} ({member['pk_member_id']})"
+    )
     new_instance = PolyphonyInstance(
         member["token"],
         member["pk_member_id"],
