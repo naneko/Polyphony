@@ -1,19 +1,20 @@
+import asyncio
 import logging
 import sqlite3
-import threading
 from typing import List
 
 import discord
 from discord.ext import commands
 
+from .helpers.checks import is_mod
+from .helpers.database import init_db, get_enabled_members
 from .instance.bot import PolyphonyInstance
-from .helpers.database import get_members, init_db
 from .settings import TOKEN, DEBUG
 
 log = logging.getLogger(__name__)
 
 # List of Instance Threads
-instances: List[dict] = []
+instances: List[PolyphonyInstance] = []
 
 # Main Polyhony Bot Instance
 bot = commands.Bot(command_prefix="p! ")
@@ -33,7 +34,7 @@ async def on_ready():
 
     # Start member instances
     log.debug("Initializing member instances...")
-    members = get_members()
+    members = get_enabled_members()
     if len(members) == 0:
         log.debug("No members found")
     for member in members:
@@ -48,14 +49,12 @@ def create_member_instance(member: sqlite3.Row):
     Create member instance threads from dictionary that is returned from database
     :param member: directory that is returned from database functions
     """
-    if not dict(member).get("member_enabled"):
+    if not member["member_enabled"]:
         pass
-    new_instance = PolyphonyInstance(dict(member))
-    thread = threading.Thread(
-        target=new_instance.run, args=[dict(member).get("token")], daemon=True
-    )
-    instances.append({"thread": thread, "instance": member})
-    thread.start()
+    new_instance = PolyphonyInstance(member)
+    loop = asyncio.get_event_loop()
+    loop.create_task(new_instance.start(member["token"]))
+    instances.append(new_instance)
 
 
 # Load extensions
@@ -70,25 +69,44 @@ log.debug("Default extensions loaded.")
 
 
 @bot.command()
+@is_mod()
 async def reload(ctx: commands.context):
     """
     Reload default extensions (cogs) for DEBUG mode
 
     :param ctx: Discord Context
     """
-    if DEBUG:
-        log.info("Reloading Extensions...")
-        for ext in init_extensions:
-            bot.reload_extension(ext)
-            log.debug(f"{ext} reloaded")
-        await ctx.send(
-            embed=discord.Embed(title="Reload Successful", color=discord.Color.green())
-        )
-        log.info("Reloading complete.")
-    else:
-        ctx.send(
-            "Hot loading is not tested, and hence not enabled, for Polyphony outside of DEBUG mode."
-        )
+    async with ctx.channel.typing():
+        if DEBUG:
+            log.info("Reloading Extensions...")
+            for extension in init_extensions:
+                from discord.ext.commands import (
+                    ExtensionNotLoaded,
+                    ExtensionNotFound,
+                    ExtensionFailed,
+                )
+
+                try:
+                    bot.reload_extension(extension)
+                except (ExtensionNotLoaded, ExtensionNotFound, ExtensionFailed) as e:
+                    log.exception(e)
+                    await ctx.send(
+                        embed=discord.Embed(
+                            title=f"Module {extension} failed to reload",
+                            color=discord.Color.red(),
+                        )
+                    )
+                log.debug(f"{extension} reloaded")
+            await ctx.send(
+                embed=discord.Embed(
+                    title="Reload Successful", color=discord.Color.green()
+                )
+            )
+            log.info("Reloading complete.")
+        else:
+            ctx.send(
+                "Hot loading is not tested, and hence not enabled, for Polyphony outside of DEBUG mode."
+            )
 
 
 bot.run(TOKEN)

@@ -6,30 +6,17 @@ SQL should only exist in this file
 
 import logging
 import pathlib
+import pickle
 import sqlite3
-from typing import List, Tuple
+from typing import List
 
 from polyphony.settings import DATABASE_URI
 
 conn = sqlite3.connect(DATABASE_URI)
+conn.row_factory = sqlite3.Row
 c = conn.cursor()
 
 log = logging.getLogger(__name__)
-
-
-def dict_factory(cursor, row):
-    """
-    Return query rows as dictionaries
-
-    Unused
-    """
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
-
-
-conn.row_factory = sqlite3.Row
 
 
 def init_db():
@@ -56,7 +43,90 @@ def get_members() -> List[sqlite3.Row]:
     return c.fetchall()
 
 
+def get_enabled_members() -> List[sqlite3.Row]:
+    c.execute("SELECT * FROM members WHERE member_enabled == 1")
+    log.debug("Fetching enabled members from database")
+    return c.fetchall()
+
+
 def get_users() -> List[sqlite3.Row]:
     c.execute("SELECT * FROM users")
     log.debug("Fetching users from database")
     return c.fetchall()
+
+
+def get_user(discord_account_id: int) -> sqlite3.Row:
+    log.debug(f"Fetching user {discord_account_id} from database")
+    c.execute("SELECT * FROM users WHERE discord_account_id = ?", [discord_account_id])
+    return c.fetchone()
+
+
+def insert_user(discord_account_id: int):
+    log.debug(f"Inserting user {discord_account_id} into database")
+    with conn:
+        c.execute("INSERT INTO users VALUES(?)", [discord_account_id])
+
+
+def get_member(pk_id: str) -> sqlite3.Row:
+    log.debug(f"Fetching PK member {pk_id} from database")
+    c.execute("SELECT * FROM members WHERE pk_member_id == ?", [pk_id])
+    return c.fetchone()
+
+
+def get_unused_tokens() -> List[sqlite3.Row]:
+    c.execute("SELECT * FROM tokens WHERE used == 0")
+    log.debug("Fetching unused tokens from database")
+    return c.fetchall()
+
+
+def get_used_tokens() -> List[sqlite3.Row]:
+    c.execute("SELECT * FROM tokens WHERE used == 1")
+    log.debug("Fetching unused tokens from database")
+    return c.fetchall()
+
+
+def get_token(token: str) -> sqlite3.Row:
+    log.debug(f"Fetching token {token} from database")
+    c.execute("SELECT * FROM tokens WHERE token = ?", [token])
+    return c.fetchone()
+
+
+def insert_token(token: str, used: bool):
+    log.debug(f"Inserting token {token} into database")
+    with conn:
+        c.execute("INSERT INTO tokens VALUES(?, ?)", [token, used])
+
+
+def update_token_as_used(token: str):
+    log.debug("Setting token to used")
+    with conn:
+        c.execute("UPDATE tokens SET used = 1 WHERE token = ?", [token])
+
+
+def insert_member(
+    token: str,
+    pk_member_id: str,
+    discord_account_id: int,
+    member_name: str,
+    display_name: str,
+    pk_avatar_url: str,
+    pk_proxy_tags: dict,
+    pk_keep_proxy: bool,
+    member_enabled: bool,
+):
+    log.debug("Inserting member into database...")
+    with conn:
+        c.execute(
+            "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                token,
+                pk_member_id,
+                discord_account_id,
+                member_name,
+                display_name,
+                pk_avatar_url,
+                pickle.dumps(pk_proxy_tags),
+                pk_keep_proxy,
+                member_enabled,
+            ],
+        )
