@@ -25,7 +25,7 @@ from polyphony.helpers.pluralkit import pk_get_member, pk_get_system_members
 
 log = logging.getLogger("polyphony." + __name__)
 
-
+# TODO: Error Handling
 class Admin(commands.Cog):
     def __init__(self, bot: commands.bot):
         self.bot = bot

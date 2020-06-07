@@ -98,7 +98,7 @@ def insert_token(token: str, used: bool):
 
 
 def update_token_as_used(token: str):
-    log.debug("Setting token to used")
+    log.debug(f"Setting token {token} to used")
     with conn:
         c.execute("UPDATE tokens SET used = 1 WHERE token = ?", [token])
 
@@ -114,7 +114,7 @@ def insert_member(
     pk_keep_proxy: bool,
     member_enabled: bool,
 ):
-    log.debug("Inserting member into database...")
+    log.debug(f"Inserting member {member_name} ({pk_member_id}) into database...")
     with conn:
         c.execute(
             "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
