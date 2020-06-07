@@ -2,10 +2,12 @@
 Instances are individual bots that are created with the purpose.
 """
 import io
+import logging
 import urllib
 
 import discord
-import logging
+
+from polyphony.helpers.database import conn, c
 
 log = logging.getLogger(__name__)
 
@@ -19,6 +21,7 @@ class PolyphonyInstance(discord.Client):
 
     def __init__(
         self,
+        token: str,
         pk_member_id: str,
         discord_account_id: int,
         member_name: str,
@@ -28,6 +31,7 @@ class PolyphonyInstance(discord.Client):
         **options,
     ):
         super().__init__(**options)
+        self._token: str = token
         self._pk_member_id: str = pk_member_id
         self._discord_account_id: int = discord_account_id
         self.member_name: str = member_name
@@ -60,10 +64,13 @@ class PolyphonyInstance(discord.Client):
         log.debug(f"{self.user} | Username updating to {value}")
         self._member_name = value
         self.user.edit(username=self._member_name)
+        with conn:
+            c.execute("UPDATE members SET member_name = ? WHERE token = ?", [value, self._token])
 
     @display_name.setter
     def display_name(self, value: str):
         self._display_name = value
+        self.user.display_name = value
         log.warning(
             f"{self.user} | Display name updated to {value} in instance but this feature is not implemented"
         )
