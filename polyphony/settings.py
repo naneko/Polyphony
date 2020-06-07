@@ -23,7 +23,7 @@ DEBUG = os.getenv("DEBUG")
 TOKEN = os.getenv("TOKEN")
 DATABASE_URI = os.getenv("DATABASE_URI")
 MESSAGE_CACHE_SIZE = os.getenv("MESSAGE_CACHE_SIZE", 20)
-MODERATOR_ROLES = os.getenv("MODERATOR_ROLES", ["Moderator"])
+MODERATOR_ROLES = os.getenv("MODERATOR_ROLES", ["Moderator", "Moderators"])
 
 # Debug Mode Setup
 if DEBUG:

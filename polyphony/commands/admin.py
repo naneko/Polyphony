@@ -6,12 +6,26 @@ from typing import Union, List
 
 import discord
 from discord.ext import commands
+from disputils import BotConfirmation
 
-from polyphony.helpers.checks import is_mod
+from polyphony.bot import create_member_instance
+from polyphony.helpers.checks import is_mod, check_token
+from polyphony.helpers.database import (
+    insert_member,
+    get_unused_tokens,
+    update_token_as_used,
+    get_member,
+    insert_user,
+    get_user,
+    get_token,
+    insert_token,
+)
+from polyphony.helpers.helpers import LogMessage
+from polyphony.helpers.pluralkit import pk_get_member, pk_get_system_members
 
 log = logging.getLogger("polyphony." + __name__)
 
-
+# TODO: Error Handling
 class Admin(commands.Cog):
     def __init__(self, bot: commands.bot):
         self.bot = bot
@@ -45,12 +59,13 @@ class Admin(commands.Cog):
     async def extend(
         self,
         ctx: commands.context,
+        mode: str,
         account: discord.Member,
         pk_id: str,
         bot_token: str = None,
     ):
         """
-        p! extend [main account] [pk system or member id] (bot token): Creates a new Polyphony member instance and show invite link for bot
+        p! extend [system/member] [main account] [pk system or member id] (bot token): Creates a new Polyphony member instance and show invite link for bot
 
         Using a system ID will attempt to create a bot for all system members using the token queue. Will fail immediately if the queue is too short.
 
@@ -64,14 +79,164 @@ class Admin(commands.Cog):
 
         Checks token is valid
 
+        :param mode: System or Member
         :param ctx: Discord Context
         :param account: Main Account to be extended from
         :param pk_id: PluralKit system or member id
         :param bot_token: Bot token to use to create the instance (optional)
         """
-        # TODO: Implement
-        await ctx.send("Sync command unimplemented")
-        log.warning("Sync command unimplemented")
+
+        log.debug("Extending new member...")
+
+        logger = LogMessage(ctx, title="Extending...")
+        await logger.init()
+
+        async with ctx.channel.typing():
+            if bot_token:
+                await ctx.message.delete()
+                await logger.log(
+                    "Command deleted to hide token. Check your server logs too."
+                )
+
+            if mode not in ["system", "member"]:
+                logger.title = "Error Extending: Syntax Error"
+                logger.color = discord.Color.red()
+                await logger.log('First argument must either be "system" or "member"')
+                return
+
+            if mode == "system":
+                await logger.log("Fetching system from PluralKit...")
+                system = await pk_get_system_members(pk_id)
+                if system is not None:
+                    system = list(system)
+                    system_names = [
+                        f"{member['name']} (`{member['id']}`)" for member in system
+                    ]
+                    await logger.log(
+                        f"Fetched system {pk_id} -> {', '.join(system_names)}"
+                    )
+                    if bot_token:
+                        await logger.log(
+                            "**WARNING** Bot token provided for system creation. Token will be ignored..."
+                        )
+                    tokens = get_unused_tokens()
+                    if len(system) > len(tokens):
+                        logger.title = "Error Extending: Not enough tokens"
+                        logger.color = discord.Color.red()
+                        await logger.log(
+                            f"The system has {len(system)} members and there are only {len(tokens)} available"
+                        )
+                        return
+                    if get_user(account.id) is None:
+                        await logger.log(
+                            f"{account.mention} is a new user! Registering them with Polyphony"
+                        )
+                        insert_user(account.id)
+                    for member, token in zip(system, tokens):
+                        # TODO: Skip if member exists
+                        insert_member(
+                            token["token"],
+                            member["id"],
+                            account.id,
+                            member["name"],
+                            member["display_name"],
+                            member["avatar_url"],
+                            member["proxy_tags"],
+                            member["keep_proxy"],
+                            member_enabled=True,
+                        )
+                        update_token_as_used(token["token"])
+                        await logger.log("Creating member instance...")
+                        create_member_instance(get_member(member["id"]))
+                else:
+                    logger.title = "Error Extending: System ID invalid"
+                    logger.color = discord.Color.red()
+                    await logger.log(f"System ID `{pk_id}` was not found")
+                    return
+
+            if mode == "member":
+                await logger.log("Fetching member from PluralKit...")
+                member = await pk_get_member(pk_id)
+                if member is not None:
+                    system_names = [f"{member['name']} (`{member['id']}`)"]
+                    await logger.log(
+                        f"Fetched member -> {member['name']} (`{member['id']}`)"
+                    )
+                    if bot_token:
+                        # Check token
+                        await logger.log("Checking token...")
+                        if not await check_token(bot_token):
+                            logger.title = "Error Extending: Bot Token Invalid"
+                            logger.color = discord.Color.red()
+                            await logger.log("Bot token is invalid")
+                            return
+                        else:
+                            await logger.log("Bot token valid")
+                            if get_token(bot_token) is None:
+                                log.info("Adding new token to database")
+                                insert_token(bot_token, True)
+                            elif get_token(bot_token)["used"]:
+                                logger.title = (
+                                    "Error Extending: Bot Token Already In Use"
+                                )
+                                logger.color = discord.Color.red()
+                                await logger.log("Token already in-use")
+                                return
+                            else:
+                                update_token_as_used(bot_token)
+                    # TODO: If no token is provided
+                    if get_user(account.id) is None:
+                        await logger.log(
+                            f"{account.mention} is a new user! Registering them with Polyphony"
+                        )
+                        insert_user(account.id)
+                    if get_member(pk_id) is None:
+                        insert_member(
+                            bot_token,
+                            member["id"],
+                            account.id,
+                            member["name"],
+                            member["display_name"],
+                            member["avatar_url"],
+                            member["proxy_tags"],
+                            member["keep_proxy"],
+                            member_enabled=True,
+                        )
+                    else:
+                        logger.title = "Member Already Registered with Polyphony"
+                        logger.color = discord.Color.light_grey()
+                        await logger.log(
+                            f"Member ID `{pk_id}` was already registered with Polyphony"
+                        )
+                        return
+                    await logger.log("Creating member instance...")
+                    create_member_instance(get_member(member["id"]))
+                else:
+                    logger.title = "Error Extending: Member ID invalid"
+                    logger.color = discord.Color.red()
+                    await logger.log(f"Member ID `{pk_id}` was not found")
+                    return
+
+            confirmation = BotConfirmation(ctx, discord.Color.blue())
+            await confirmation.confirm(
+                f"Create {mode} for {account} with member(s) {', '.join(system_names)}?"
+            )
+            if confirmation.confirmed:
+                await confirmation.message.delete()
+                await logger.log("Adding to database...")
+            else:
+                await confirmation.message.delete()
+                logger.title = "Extend Cancelled"
+                logger.color = discord.Color.red()
+                await logger.log("Extend cancelled by user")
+                return
+
+        logger.title = "Extend Success"
+        logger.color = discord.Color.green()
+        await logger.send(
+            "[Created member info + invite]\n*Waiting for instance to be invited to server...*"
+        )
+        log.info("New member instance extended and activated")
 
     @commands.command()
     @is_mod()

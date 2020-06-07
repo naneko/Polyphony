@@ -16,12 +16,11 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS members (
     token               TEXT    PRIMARY KEY, -- Discord Bot Token
     pk_member_id        TEXT    NOT NULL UNIQUE,
-    pk_system_id        TEXT    NOT NULL,
     discord_account_id  INTEGER NOT NULL,
     member_name         TEXT    NOT NULL,
-    display_name        TEXT    NOT NULL,
+    display_name        TEXT,
     pk_avatar_url       TEXT    NOT NULL,
-    pk_proxy_tags       BLOB    NOT NULL,
+    pk_proxy_tags       TEXT    NOT NULL,
     pk_keep_proxy       INT     NOT NULL CHECK(pk_keep_proxy == 1 OR pk_keep_proxy == 0), -- BOOL
     member_enabled      INT     NOT NULL CHECK(pk_keep_proxy == 1 OR pk_keep_proxy == 0), -- BOOL
 
