@@ -24,6 +24,7 @@ TOKEN = os.getenv("TOKEN")
 DATABASE_URI = os.getenv("DATABASE_URI")
 MESSAGE_CACHE_SIZE = os.getenv("MESSAGE_CACHE_SIZE", 20)
 MODERATOR_ROLES = os.getenv("MODERATOR_ROLES", ["Moderator", "Moderators"])
+DEFAULT_INSTANCE_PERMS = os.getenv("DEFAULT_INSTANCE_PERMS", 335653888)
 
 # Debug Mode Setup
 if DEBUG:

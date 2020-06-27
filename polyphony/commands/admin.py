@@ -22,6 +22,7 @@ from polyphony.helpers.database import (
 )
 from polyphony.helpers.helpers import LogMessage
 from polyphony.helpers.pluralkit import pk_get_member, pk_get_system_members
+from polyphony.settings import DEFAULT_INSTANCE_PERMS
 
 log = logging.getLogger("polyphony." + __name__)
 
@@ -233,10 +234,32 @@ class Admin(commands.Cog):
 
         logger.title = "Extend Success"
         logger.color = discord.Color.green()
+        # TODO: Incorporate optional client ID into queue and extend command to auto generate invite link
         await logger.send(
-            "[Created member info + invite]\n*Waiting for instance to be invited to server...*"
+            "[Created member info + invite]\n*Waiting for instance to be invited to server...*\n*Generate a link with the proper permissions using `p! invite [Client ID]*"
         )
         log.info("New member instance extended and activated")
+
+    @commands.command()
+    @is_mod()
+    async def invite(self, ctx: commands.context, client_id: str):
+        """
+        p! invite [client id]: Generates an invite link with pre-set permissions from client ID.
+
+        :param ctx: Discord Context
+        :param client_id: Bot Client ID
+        """
+        log.debug("Generating invite link")
+        embed = discord.Embed(
+            title=f"Invite Link for {ctx.guild.name}",
+            url=discord.utils.oauth_url(
+                client_id,
+                permissions=discord.Permissions(DEFAULT_INSTANCE_PERMS),
+                guild=ctx.guild,
+            ),
+        )
+        embed.set_footer(text=f"Client ID: {client_id}")
+        await ctx.send(embed=embed)
 
     @commands.command()
     @is_mod()

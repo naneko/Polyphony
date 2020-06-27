@@ -58,7 +58,16 @@ class PolyphonyInstance(discord.Client):
         self.pk_avatar_url: str = self.__pk_avatar_url
         self.pk_proxy_tags: dict = self.__pk_proxy_tags
         log.debug(f"{self.user} ({self._pk_member_id}): Initialization complete")
-        await self.update()
+        for guild in self.guilds:
+            await guild.get_member(self.user.id).edit(nick=self._display_name)
+
+        self_user = self.get_user(self._discord_account_id)
+        await self.change_presence(
+            activity=discord.Activity(
+                name=f"{self_user.name}#{self_user.discriminator}",
+                type=discord.ActivityType.listening,
+            )
+        )
 
     async def update(self):
         """
@@ -151,3 +160,20 @@ class PolyphonyInstance(discord.Client):
             f"{self.user} ({self._pk_member_id}): Proxy tags updated to {value} in instance but this feature is not implemented"
         )
         # TODO: Update listener if needed
+
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if self._discord_account_id == after.id and before.status != after.status:
+            log.debug(
+                f"{self.user} ({self._pk_member_id}): Updating presence to {after.status}"
+            )
+            self_user = self.get_user(self._discord_account_id)
+            await self.change_presence(
+                status=after.status,
+                activity=discord.Activity(
+                    name=f"{self_user.name}#{self_user.discriminator}",
+                    type=discord.ActivityType.listening,
+                ),
+            )
+
+    async def on_guild_join(self, guild: discord.Guild):
+        await guild.get_member(self.user.id).edit(nick=self._display_name)
