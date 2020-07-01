@@ -1,8 +1,9 @@
 """
 Admin commands to configure polyphony
 """
+import asyncio
 import logging
-from typing import Union, List
+from typing import Union
 
 import discord
 from discord.ext import commands
@@ -22,7 +23,7 @@ from polyphony.helpers.database import (
 )
 from polyphony.helpers.helpers import LogMessage
 from polyphony.helpers.pluralkit import pk_get_member, pk_get_system_members
-from polyphony.settings import DEFAULT_INSTANCE_PERMS
+from polyphony.settings import DEFAULT_INSTANCE_PERMS, MODERATOR_ROLES
 
 log = logging.getLogger("polyphony." + __name__)
 
@@ -30,6 +31,7 @@ log = logging.getLogger("polyphony." + __name__)
 class Admin(commands.Cog):
     def __init__(self, bot: commands.bot):
         self.bot = bot
+        self.token_session = []
 
     @commands.command()
     @is_mod()
@@ -63,7 +65,6 @@ class Admin(commands.Cog):
         mode: str,
         account: discord.Member,
         pk_id: str,
-        bot_token: str = None,
     ):
         """
         p! extend [system/member] [main account] [pk system or member id] (bot token): Creates a new Polyphony member instance and show invite link for bot
@@ -84,21 +85,14 @@ class Admin(commands.Cog):
         :param ctx: Discord Context
         :param account: Main Account to be extended from
         :param pk_id: PluralKit system or member id
-        :param bot_token: Bot token to use to create the instance (optional)
         """
 
-        log.debug("Extending new member...")
+        log.debug("Registering new member...")
 
-        logger = LogMessage(ctx, title="Extending...")
+        logger = LogMessage(ctx, title="Registering...")
         await logger.init()
 
         async with ctx.channel.typing():
-            if bot_token:
-                await ctx.message.delete()
-                await logger.log(
-                    "Command deleted to hide token. Check your server logs too."
-                )
-
             if mode not in ["system", "member"]:
                 logger.title = "Error Extending: Syntax Error"
                 logger.color = discord.Color.red()
@@ -116,13 +110,9 @@ class Admin(commands.Cog):
                     await logger.log(
                         f"Fetched system {pk_id} -> {', '.join(system_names)}"
                     )
-                    if bot_token:
-                        await logger.log(
-                            "**WARNING** Bot token provided for system creation. Token will be ignored..."
-                        )
                     tokens = get_unused_tokens()
                     if len(system) > len(tokens):
-                        logger.title = "Error Extending: Not enough tokens"
+                        logger.title = "Error Registering: Not enough tokens"
                         logger.color = discord.Color.red()
                         await logger.log(
                             f"The system has {len(system)} members and there are only {len(tokens)} available"
@@ -134,7 +124,10 @@ class Admin(commands.Cog):
                         )
                         insert_user(account.id)
                     for member, token in zip(system, tokens):
-                        # TODO: Skip if member exists
+                        if len(get_member(member['id'])) > 0:
+                            await logger.log(f"{member['name']} ({member['id']}) already registered with Polyphony")
+                            continue
+                        await logger.log(f"Registering {member['name']} ({member['id']})")
                         insert_member(
                             token["token"],
                             member["id"],
@@ -150,7 +143,7 @@ class Admin(commands.Cog):
                         await logger.log("Creating member instance...")
                         create_member_instance(get_member(member["id"]))
                 else:
-                    logger.title = "Error Extending: System ID invalid"
+                    logger.title = "Error Registering: System ID invalid"
                     logger.color = discord.Color.red()
                     await logger.log(f"System ID `{pk_id}` was not found")
                     return
@@ -163,29 +156,14 @@ class Admin(commands.Cog):
                     await logger.log(
                         f"Fetched member -> {member['name']} (`{member['id']}`)"
                     )
-                    if bot_token:
-                        # Check token
-                        await logger.log("Checking token...")
-                        if not await check_token(bot_token):
-                            logger.title = "Error Extending: Bot Token Invalid"
-                            logger.color = discord.Color.red()
-                            await logger.log("Bot token is invalid")
-                            return
-                        else:
-                            await logger.log("Bot token valid")
-                            if get_token(bot_token) is None:
-                                log.info("Adding new token to database")
-                                insert_token(bot_token, True)
-                            elif get_token(bot_token)["used"]:
-                                logger.title = (
-                                    "Error Extending: Bot Token Already In Use"
-                                )
-                                logger.color = discord.Color.red()
-                                await logger.log("Token already in-use")
-                                return
-                            else:
-                                update_token_as_used(bot_token)
-                    # TODO: If no token is provided
+                    tokens = get_unused_tokens()
+                    if len(tokens) == 0:
+                        logger.title = "Error Registering: No Tokens Available"
+                        logger.color = discord.Color.red()
+                        await logger.log("No tokens in queue. Run `p; tokens` for information on how to add more.")
+                        return
+                    bot_token = tokens[0]
+                    update_token_as_used(bot_token)
                     if get_user(account.id) is None:
                         await logger.log(
                             f"{account.mention} is a new user! Registering them with Polyphony"
@@ -213,7 +191,7 @@ class Admin(commands.Cog):
                     await logger.log("Creating member instance...")
                     create_member_instance(get_member(member["id"]))
                 else:
-                    logger.title = "Error Extending: Member ID invalid"
+                    logger.title = "Error Registering: Member ID invalid"
                     logger.color = discord.Color.red()
                     await logger.log(f"Member ID `{pk_id}` was not found")
                     return
@@ -229,14 +207,13 @@ class Admin(commands.Cog):
                 await confirmation.message.delete()
                 logger.title = "Extend Cancelled"
                 logger.color = discord.Color.red()
-                await logger.log("Extend cancelled by user")
+                await logger.log("Registration cancelled by user")
                 return
 
-        logger.title = "Extend Success"
+        logger.title = "Registration Successful"
         logger.color = discord.Color.green()
-        # TODO: Incorporate optional client ID into queue and extend command to auto generate invite link
-        await logger.send(
-            "[Created member info + invite]\n*Waiting for instance to be invited to server...*\n*Generate a link with the proper permissions using `p! invite [Client ID]*"
+        await logger.log(
+            "\n*Generate an invite link using `p; invite [Client ID]*"
         )
         log.info("New member instance extended and activated")
 
@@ -288,24 +265,7 @@ class Admin(commands.Cog):
         log.warning("Sync command unimplemented")
 
     @commands.command()
-    @is_mod()
-    async def queue(self, ctx: commands.context, *tokens: List[str]):
-        """
-        p! queue [bot token] (bot token)...: Queues bot tokens for usage
-
-        Checks tokens are valid
-
-        :param ctx: Discord Context
-        :param tokens: Discord Bot Tokens
-        :return:
-        """
-        # TODO: Implement
-        await ctx.send("Sync command unimplemented")
-        log.warning("Sync command unimplemented")
-
-    @commands.command()
-    @is_mod()
-    async def manageroles(self, ctx: commands.context, action: str, *roles: List[str]):
+    async def tokens(self, ctx: commands.context, *tokens: str):
         """
         p! manageroles add/remove [role id(:index)] (role id(:index))...: Allows/disallows a role to be assigned to a Polyphony system member.
 
@@ -316,12 +276,43 @@ class Admin(commands.Cog):
         p! remove does not unassign roles
 
         :param ctx: Discord Context
-        :param action: add/remove
-        :param roles: role id(:index) (index is optional)
+        :param tokens: List of tokens
         """
-        # TODO: Implement
-        await ctx.send("Sync command unimplemented")
-        log.warning("Sync command unimplemented")
+        await ctx.message.delete()
+        async def session(self, author: discord.Member):
+            self.token_session.append(author)
+            await asyncio.sleep(300)
+            self.token_session.remove(author)
+        if ctx.channel.type is discord.ChannelType.private and ctx.message.author in self.token_session:
+            await ctx.send("Adding tokens...")
+            log.debug(tokens)
+            for index, token in enumerate(tokens):
+                logger = LogMessage(ctx, title=f"Adding token {index}...")
+                await logger.init()
+                # Check token
+                await logger.log(f"Checking token {index}...")
+                if not await check_token(token):
+                    logger.title = f"Token {index} Invalid"
+                    logger.color = discord.Color.red()
+                    await logger.log("Bot token is invalid")
+                else:
+                    await logger.log("Token valid")
+                    if get_token(token) is None:
+                        log.info("Adding new token to database")
+                        insert_token(token, True)
+                        logger.title = f"Bot token {index} added"
+                        logger.color = discord.Color.green()
+                        await logger.send(None)
+                    else:
+                        logger.title = f"Token {index} already in database"
+                        logger.color = discord.Color.orange()
+                        await logger.log("Bot token already in database")
+        elif ctx.channel.type is not discord.ChannelType.private:
+            if any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
+                await ctx.message.author.send("Token mode enabled for 5 minutes. Add tokens with `p; tokens [token] (more tokens...)` right here.\n\n*Don't paste a bot token in a server*")
+                await session(self, ctx.message.author)
+        else:
+            await ctx.channel.send("To add tokens, execute `p; tokens` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `p; tokens [token] (more tokens...)`\n\n*Seriously don't paste a bot token in a server*")
 
 
 def setup(bot: commands.bot):

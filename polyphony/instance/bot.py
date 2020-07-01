@@ -1,6 +1,7 @@
 """
 Instances are individual bots that are created with the purpose.
 """
+import asyncio
 import logging
 import pickle
 
