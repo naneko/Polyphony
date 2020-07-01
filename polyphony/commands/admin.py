@@ -42,10 +42,10 @@ class Admin(commands.Cog):
         arg2: discord.Member = None,
     ):
         """
-        p! list: Shows all active Polyphony members sorted by main account
-        p! list inactive: Shows systems and main accounts that haven’t been used in n number of days defined in the config or at all or where the main user has left the server
-        p! list [main account]: Lists all polyphony system members for a given main account
-        p! list all [main account]: Lists all PluralKit system members for a given main account
+        p; list: Shows all active Polyphony members sorted by main account
+        p; list inactive: Shows systems and main accounts that haven’t been used in n number of days defined in the config or at all or where the main user has left the server
+        p; list [main account]: Lists all polyphony system members for a given main account
+        p; list all [main account]: Lists all PluralKit system members for a given main account
 
         TODO: Add configuration option for auto-disable inactive users
 
@@ -59,7 +59,7 @@ class Admin(commands.Cog):
 
     @commands.command()
     @is_mod()
-    async def extend(
+    async def register(
         self,
         ctx: commands.context,
         mode: str,
@@ -67,7 +67,7 @@ class Admin(commands.Cog):
         pk_id: str,
     ):
         """
-        p! extend [system/member] [main account] [pk system or member id] (bot token): Creates a new Polyphony member instance and show invite link for bot
+        p; register [system/member] [main account] [pk system or member id] (bot token): Creates a new Polyphony member instance and show invite link for bot
 
         Using a system ID will attempt to create a bot for all system members using the token queue. Will fail immediately if the queue is too short.
 
@@ -221,7 +221,7 @@ class Admin(commands.Cog):
     @is_mod()
     async def invite(self, ctx: commands.context, client_id: str):
         """
-        p! invite [client id]: Generates an invite link with pre-set permissions from client ID.
+        p; invite [client id]: Generates an invite link with pre-set permissions from client ID.
 
         :param ctx: Discord Context
         :param client_id: Bot Client ID
@@ -242,7 +242,7 @@ class Admin(commands.Cog):
     @is_mod()
     async def suspend(self, ctx: commands.context, system_member: discord.Member):
         """
-        p! suspend [system member]: Sets member_enabled to false. Pulls the member instance offline.
+        p; suspend [system member]: Sets member_enabled to false. Pulls the member instance offline.
 
         :param ctx: Discord Context
         :param system_member: System Member
@@ -255,7 +255,7 @@ class Admin(commands.Cog):
     @is_mod()
     async def disable(self, ctx: commands.context, system_member: discord.Member):
         """
-        p! disable [system member]: Disables a system member by deleting it from the database and kicking it from the server. Bot token cannot be reused.
+        p; disable [system member]: Disables a system member by deleting it from the database and kicking it from the server. Bot token cannot be reused.
 
         :param ctx: Discord Context
         :param system_member: System Member
@@ -267,13 +267,7 @@ class Admin(commands.Cog):
     @commands.command()
     async def tokens(self, ctx: commands.context, *tokens: str):
         """
-        p! manageroles add/remove [role id(:index)] (role id(:index))...: Allows/disallows a role to be assigned to a Polyphony system member.
-
-        p! remove all: Remove all options from list
-
-        Index will determine the order the roles are inserted into the list (defaults to end of list).
-
-        p! remove does not unassign roles
+        p; tokens [token] (more tokens...): Add tokens to queue
 
         :param ctx: Discord Context
         :param tokens: List of tokens

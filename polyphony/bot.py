@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 instances: List[PolyphonyInstance] = []
 
 # Main Polyhony Bot Instance
-bot = commands.Bot(command_prefix="p! ")
+bot = commands.Bot(command_prefix="p; ")
 
 # Default Cog Extensions to be loaded
 init_extensions = ["commands.admin", "commands.user"]

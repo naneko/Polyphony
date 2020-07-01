@@ -2,7 +2,6 @@
 User commands to configure Polyphony
 """
 import logging
-from typing import List, Literal
 
 import discord
 from discord.ext import commands
@@ -13,6 +12,9 @@ log = logging.getLogger("polyphony." + __name__)
 
 
 class User(commands.Cog):
+
+    # TODO: When member instance joins guild, allow a default set of roles to be assigned from settings.py
+
     def __init__(self, bot: discord.ext.commands.bot):
         self.bot = bot
 
@@ -34,7 +36,7 @@ class User(commands.Cog):
         self, ctx: commands.context, system_member: discord.Member, *, nickname: str
     ):
         """
-        p! nick: Set system member nickname
+        p; nick: Set system member nickname
 
         :param ctx: Discord Context
         :param system_member: System Member Mention
@@ -48,7 +50,7 @@ class User(commands.Cog):
     @is_polyphony_user(allow_mods=True)
     async def ping(self, ctx: commands.context):
         """
-        p! ping: Pings the core bot
+        p; ping: Pings the core bot
 
         TODO: Also ping all system member instances for the given user
 
@@ -57,32 +59,17 @@ class User(commands.Cog):
         await ctx.send(embed=discord.Embed(title=f"Pong ({self.bot.latency} ms)"))
 
     @commands.command()
-    @is_polyphony_user(allow_mods=True)
-    async def listroles(self, ctx: commands.context):
-        """
-        p! listroles: Lists available roles and their IDs
-
-        :param ctx: Discord Context
-        """
-        # TODO: Implement
-        await ctx.send("Listroles command unimplemented")
-        log.warning("Listroles command unimplemented")
-
-    @commands.command()
     @is_polyphony_user()
     async def role(
         self,
         ctx: commands.context,
-        mode: Literal["add", "remove"],
-        system_member: discord.Member,
-        *args: List[int],
+        system_member: discord.Member = None
     ):
         """
-        p! role add/remove [system member] [role IDs]: Adds a list of roles based on the ID from p! listroles
+        p; role add/remove [system member]: Enters role edit mode by saving current roles in memory and then syncing any changes with the member instance. Run again with no arguments or wait 5 minutes to retore user roles.
 
+        :param system_member: System member to sync roles with
         :param ctx: Discord Context
-        :param mode: (add/remove) mode
-        :param system_member: A system member bot user
         """
         # TODO: Implement
         await ctx.send("Role command unimplemented")
@@ -92,7 +79,7 @@ class User(commands.Cog):
     @is_polyphony_user()
     async def edit(self, ctx: commands.context, *, message: str):
         """
-        p! edit [message]: Edits the last message
+        p; edit [message]: Edits the last message
         
         :param ctx: Discord Context
         :param message: Message Content
@@ -107,7 +94,7 @@ class User(commands.Cog):
         self, ctx: commands.context, message_id: discord.Message, *, message: str
     ):
         """
-        p! editid [message id] [message]: Edits message with ID
+        p; editid [message id] [message]: Edits message with ID
 
         :param ctx: Discord Context
         :param message_id: ID of message to edit
@@ -121,7 +108,7 @@ class User(commands.Cog):
     @is_polyphony_user()
     async def delete(self, ctx: commands.context, message_id: discord.Message = None):
         """
-        p! del (id): Deletes the last message unless a message ID parameter is provided. Can be run multiple times. n max limited by config.
+        p; del (id): Deletes the last message unless a message ID parameter is provided. Can be run multiple times. n max limited by config.
 
         :param ctx: Discord Context
         :param message_id: ID of message to delete
