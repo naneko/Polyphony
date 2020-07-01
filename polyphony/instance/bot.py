@@ -109,10 +109,10 @@ class PolyphonyInstance(discord.Client):
     @member_name.setter
     def member_name(self, value: str):
         log.debug(
-            f"{self.user} ({self._pk_member_id}): Username updating to {value} Polyphony"
+            f"{self.user} ({self._pk_member_id}): Username updating to p.{value}"
         )
-        self._member_name = f"{value} Polyphony"
-        self.user.name = f"{value} Polyphony"
+        self._member_name = f"p.{value}"
+        self.user.name = f"p.{value}"
         with conn:
             log.debug(f"{self.user} ({self._pk_member_id}): Updating Member Name")
             c.execute(
