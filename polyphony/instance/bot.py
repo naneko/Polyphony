@@ -53,15 +53,18 @@ class PolyphonyInstance(discord.Client):
 
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
-        log.info(f"Instance started as {self.user} ({self._pk_member_id})")
+        log.info(f"Instance started as {self.user} ({self._pk_member_id}). Initializing...")
         self.member_name: str = self.__member_name
+        await asyncio.sleep(1)
         self.display_name: str = self.__display_name
+        await asyncio.sleep(1)
         self.pk_avatar_url: str = self.__pk_avatar_url
+        await asyncio.sleep(1)
         self.pk_proxy_tags: dict = self.__pk_proxy_tags
-        log.debug(f"{self.user} ({self._pk_member_id}): Initialization complete")
         for guild in self.guilds:
+            await asyncio.sleep(1)
             await guild.get_member(self.user.id).edit(nick=self._display_name)
-
+        await asyncio.sleep(1)
         self_user = self.get_user(self._discord_account_id)
         await self.change_presence(
             activity=discord.Activity(
@@ -69,6 +72,7 @@ class PolyphonyInstance(discord.Client):
                 type=discord.ActivityType.listening,
             )
         )
+        log.debug(f"{self.user} ({self._pk_member_id}): Initialization complete")
 
     async def update(self):
         """
