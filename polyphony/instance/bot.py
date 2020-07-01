@@ -53,7 +53,9 @@ class PolyphonyInstance(discord.Client):
 
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
-        log.info(f"Instance started as {self.user} ({self._pk_member_id}). Initializing...")
+        log.info(
+            f"Instance started as {self.user} ({self._pk_member_id}). Initializing..."
+        )
         self.member_name: str = self.__member_name
         await asyncio.sleep(1)
         self.display_name: str = self.__display_name

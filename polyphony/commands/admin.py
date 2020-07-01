@@ -60,11 +60,7 @@ class Admin(commands.Cog):
     @commands.command()
     @is_mod()
     async def register(
-        self,
-        ctx: commands.context,
-        mode: str,
-        account: discord.Member,
-        pk_id: str,
+        self, ctx: commands.context, mode: str, account: discord.Member, pk_id: str,
     ):
         """
         p; register [system/member] [main account] [pk system or member id] (bot token): Creates a new Polyphony member instance and show invite link for bot
@@ -124,10 +120,14 @@ class Admin(commands.Cog):
                         )
                         insert_user(account.id)
                     for member, token in zip(system, tokens):
-                        if len(get_member(member['id'])) > 0:
-                            await logger.log(f"{member['name']} ({member['id']}) already registered with Polyphony")
+                        if len(get_member(member["id"])) > 0:
+                            await logger.log(
+                                f"{member['name']} ({member['id']}) already registered with Polyphony"
+                            )
                             continue
-                        await logger.log(f"Registering {member['name']} ({member['id']})")
+                        await logger.log(
+                            f"Registering {member['name']} ({member['id']})"
+                        )
                         insert_member(
                             token["token"],
                             member["id"],
@@ -160,7 +160,9 @@ class Admin(commands.Cog):
                     if len(tokens) == 0:
                         logger.title = "Error Registering: No Tokens Available"
                         logger.color = discord.Color.red()
-                        await logger.log("No tokens in queue. Run `p; tokens` for information on how to add more.")
+                        await logger.log(
+                            "No tokens in queue. Run `p; tokens` for information on how to add more."
+                        )
                         return
                     bot_token = tokens[0]
                     update_token_as_used(bot_token)
@@ -212,9 +214,7 @@ class Admin(commands.Cog):
 
         logger.title = "Registration Successful"
         logger.color = discord.Color.green()
-        await logger.log(
-            "\n*Generate an invite link using `p; invite [Client ID]*"
-        )
+        await logger.log("\n*Generate an invite link using `p; invite [Client ID]*")
         log.info("New member instance extended and activated")
 
     @commands.command()
@@ -273,11 +273,16 @@ class Admin(commands.Cog):
         :param tokens: List of tokens
         """
         await ctx.message.delete()
+
         async def session(self, author: discord.Member):
             self.token_session.append(author)
             await asyncio.sleep(300)
             self.token_session.remove(author)
-        if ctx.channel.type is discord.ChannelType.private and ctx.message.author in self.token_session:
+
+        if (
+            ctx.channel.type is discord.ChannelType.private
+            and ctx.message.author in self.token_session
+        ):
             await ctx.send("Adding tokens...")
             log.debug(tokens)
             for index, token in enumerate(tokens):
@@ -303,10 +308,14 @@ class Admin(commands.Cog):
                         await logger.log("Bot token already in database")
         elif ctx.channel.type is not discord.ChannelType.private:
             if any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
-                await ctx.message.author.send("Token mode enabled for 5 minutes. Add tokens with `p; tokens [token] (more tokens...)` right here.\n\n*Don't paste a bot token in a server*")
+                await ctx.message.author.send(
+                    "Token mode enabled for 5 minutes. Add tokens with `p; tokens [token] (more tokens...)` right here.\n\n*Don't paste a bot token in a server*"
+                )
                 await session(self, ctx.message.author)
         else:
-            await ctx.channel.send("To add tokens, execute `p; tokens` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `p; tokens [token] (more tokens...)`\n\n*Seriously don't paste a bot token in a server*")
+            await ctx.channel.send(
+                "To add tokens, execute `p; tokens` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `p; tokens [token] (more tokens...)`\n\n*Seriously don't paste a bot token in a server*"
+            )
 
 
 def setup(bot: commands.bot):

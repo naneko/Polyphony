@@ -60,11 +60,7 @@ class User(commands.Cog):
 
     @commands.command()
     @is_polyphony_user()
-    async def role(
-        self,
-        ctx: commands.context,
-        system_member: discord.Member = None
-    ):
+    async def role(self, ctx: commands.context, system_member: discord.Member = None):
         """
         p; role add/remove [system member]: Enters role edit mode by saving current roles in memory and then syncing any changes with the member instance. Run again with no arguments or wait 5 minutes to retore user roles.
 
