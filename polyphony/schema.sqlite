@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS members (
     token               TEXT    PRIMARY KEY, -- Discord Bot Token
     pk_member_id        TEXT    NOT NULL UNIQUE,
     discord_account_id  INTEGER NOT NULL,
+    member_account_id   INTEGER NOT NULL UNIQUE,
     member_name         TEXT    NOT NULL,
     display_name        TEXT,
     pk_avatar_url       TEXT    NOT NULL,

@@ -17,10 +17,14 @@ log = logging.getLogger(__name__)
 instances: List[PolyphonyInstance] = []
 
 # Main Polyhony Bot Instance
-bot = commands.Bot(command_prefix="p; ")
+bot = commands.Bot(command_prefix=";;")
 
 # Default Cog Extensions to be loaded
 init_extensions = ["commands.admin", "commands.user"]
+
+# TODO: Help Messages
+# TODO: ON_ERROR() handling to log to channel
+# TODO: general polyphony channel logging module
 
 
 @bot.event
@@ -87,6 +91,7 @@ async def reload(ctx: commands.context):
 
     :param ctx: Discord Context
     """
+    # TODO: Restart Instances
     async with ctx.channel.typing():
         if DEBUG:
             log.info("Reloading Extensions...")

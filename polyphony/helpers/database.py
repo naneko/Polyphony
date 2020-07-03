@@ -67,6 +67,15 @@ def insert_user(discord_account_id: int):
         c.execute("INSERT INTO users VALUES(?)", [discord_account_id])
 
 
+def suspend_member(discord_account_id: int):
+    log.debug(f"Suspending user {discord_account_id} in database")
+    with conn:
+        c.execute(
+            "UPDATE members SET member_enabled = 0 WHERE discord_account_id = ?",
+            [discord_account_id],
+        )
+
+
 def get_member(pk_id: str) -> sqlite3.Row:
     log.debug(f"Fetching PK member {pk_id} from database")
     c.execute("SELECT * FROM members WHERE pk_member_id == ?", [pk_id])
@@ -107,6 +116,7 @@ def insert_member(
     token: str,
     pk_member_id: str,
     discord_account_id: int,
+    member_account_id: int,
     member_name: str,
     display_name: str,
     pk_avatar_url: str,
@@ -117,11 +127,12 @@ def insert_member(
     log.debug(f"Inserting member {member_name} ({pk_member_id}) into database...")
     with conn:
         c.execute(
-            "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 token,
                 pk_member_id,
                 discord_account_id,
+                member_account_id,
                 member_name,
                 display_name,
                 pk_avatar_url,
