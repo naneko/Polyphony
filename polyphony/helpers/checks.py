@@ -3,9 +3,10 @@ Checks to perform when running commands
 """
 import logging
 
+import discord
 from discord.ext import commands
 
-from polyphony.helpers.database import get_users
+from polyphony.helpers.database import get_user
 from polyphony.settings import MODERATOR_ROLES
 
 log = logging.getLogger(__name__)
@@ -13,6 +14,7 @@ log = logging.getLogger(__name__)
 
 def is_mod():
     """
+    Decorator
     Is a moderator as defined in the settings
     """
 
@@ -31,16 +33,18 @@ def is_mod():
 
 def is_polyphony_user(allow_mods: bool = False):
     """
+    Decorator
     Is a Polyphony user in the users database
     """
     # TODO: Add error message that self deletes
     async def predicate(ctx: commands.context):
-        is_user = ctx.message.author.id in get_users()
+        user = get_user(ctx.author.id)
+        is_mod = False
         if allow_mods:
-            is_user = is_user or any(
+            is_mod = any(
                 role.name in MODERATOR_ROLES for role in ctx.message.author.roles
             )
-        if is_user:
+        if is_mod or user is not None:
             return True
         else:
             await ctx.send(
@@ -50,3 +54,29 @@ def is_polyphony_user(allow_mods: bool = False):
             return False
 
     return commands.check(predicate)
+
+
+async def check_token(token: str) -> bool:
+    """
+    Checks discord token is valid
+
+    :param token: Discord Token
+    :return: boolean
+    """
+    out = True
+    test_client = discord.Client()
+
+    log.debug("Checking bot token...")
+
+    try:
+        log.debug("Attempting login...")
+        await test_client.login(token)
+        log.debug("Login successs")
+    except discord.LoginFailure:
+        log.debug("Bot token invalid")
+        out = False
+    finally:
+        await test_client.logout()
+        log.debug("Logout of test instance complete.")
+
+    return out
