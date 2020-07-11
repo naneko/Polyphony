@@ -76,7 +76,7 @@ async def check_token(token: str) -> bool:
         log.debug("Bot token invalid")
         out = False
     finally:
-        await test_client.logout()
+        await test_client.close()
         log.debug("Logout of test instance complete.")
 
     return out

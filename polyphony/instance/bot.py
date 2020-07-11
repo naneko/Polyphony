@@ -8,6 +8,8 @@ import time
 from datetime import timedelta
 
 import discord
+import discord.ext
+import emoji
 
 from polyphony.helpers.database import conn, c
 from polyphony.helpers.pluralkit import pk_get_member
@@ -79,7 +81,9 @@ class PolyphonyInstance(discord.Client):
                 "UPDATE members SET member_account_id = ? WHERE token = ?",
                 [self.user.id, self._token],
             )
-        log.debug(f"{self.user} ({self._pk_member_id}): Initialization complete")
+        log.debug(
+            f"{self.user} ({self._pk_member_id}): Initialization complete"
+        )
 
     async def update(self, ctx=None):
         """
@@ -98,7 +102,9 @@ class PolyphonyInstance(discord.Client):
         import requests
 
         try:
-            await self.user.edit(avatar=requests.get(self.pk_avatar_url).content)
+            await self.user.edit(
+                avatar=requests.get(self.pk_avatar_url).content
+            )
         except:
             if ctx is not None:
                 embed = discord.Embed(
@@ -139,11 +145,15 @@ class PolyphonyInstance(discord.Client):
 
     @member_name.setter
     def member_name(self, value: str):
-        log.debug(f"{self.user} ({self._pk_member_id}): Username updating to p.{value}")
+        log.debug(
+            f"{self.user} ({self._pk_member_id}): Username updating to p.{value}"
+        )
         self._member_name = f"p.{value}"
         self.user.name = f"p.{value}"
         with conn:
-            log.debug(f"{self.user} ({self._pk_member_id}): Updating Member Name")
+            log.debug(
+                f"{self.user} ({self._pk_member_id}): Updating Member Name"
+            )
             c.execute(
                 "UPDATE members SET member_name = ? WHERE token = ?",
                 [value, self._token],
@@ -190,8 +200,16 @@ class PolyphonyInstance(discord.Client):
                 [pickle.dumps(value), self._token],
             )
 
-    async def on_member_update(self, before: discord.Member, after: discord.Member):
-        if self._discord_account_id == after.id and before.status != after.status:
+    def get_token(self):
+        return self._token
+
+    async def on_member_update(
+        self, before: discord.Member, after: discord.Member
+    ):
+        if (
+            self._discord_account_id == after.id
+            and before.status != after.status
+        ):
             log.debug(
                 f"{self.user} ({self._pk_member_id}): Updating presence to {after.status}"
             )
@@ -205,6 +223,8 @@ class PolyphonyInstance(discord.Client):
             )
 
     async def on_message(self, message):
+        # TODO: Delete with main bot for permissions reasons
+        # TODO: Send attachments
         start = time.time()
         if (
             message.content.startswith(self.pk_proxy_tags.get("prefix") or "")
@@ -227,6 +247,66 @@ class PolyphonyInstance(discord.Client):
             log.debug(
                 f"{self.user} ({self._pk_member_id}): Benchmark: {timedelta(seconds=end - start)} | Protocol Roundtrip: {timedelta(seconds=self.latency)}"
             )
+        elif (
+            self.user in message.mentions
+            and message.author.id != self._discord_account_id
+            and message.author.id != self.user.id
+        ):
+            log.debug(
+                f"Forwarding ping from {self.user} to {self.get_user(self._discord_account_id)}"
+            )
+            from polyphony.bot import bot
+
+            embed = discord.Embed(
+                description=f"Originally to {self.user.mention}\n[Highlight Message]({message.jump_url})"
+            )
+            embed.set_author(
+                name=f"From {message.author}",
+                icon_url=message.author.avatar_url,
+            )
+
+            await bot.get_channel(message.channel.id).send(
+                f"{self.get_user(self._discord_account_id).mention}",
+                embed=embed,
+            )
 
     async def on_guild_join(self, guild: discord.Guild):
         await guild.get_member(self.user.id).edit(nick=self._display_name)
+
+    async def on_reaction_add(self, reaction, user):
+        # TODO: Delete Reaction
+        if reaction.message.author == self.user and user == self.get_user(
+            self._discord_account_id
+        ):
+            # Edit React
+            if (
+                emoji.demojize(reaction.emoji) or ""
+            ) == ":memo:":  # Spiral Notepad
+                from polyphony.bot import bot
+
+                embed = discord.Embed(
+                    description=f"{user.mention} you are now editing a [message]({reaction.message.jump_url})\nYour next message will replace it's contents."
+                )
+                embed.set_footer(text='Type "cancel" to cancel edit')
+                instructions = await bot.get_channel(
+                    reaction.message.channel.id
+                ).send(embed=embed)
+                try:
+                    message = await self.wait_for(
+                        "message",
+                        check=lambda message: message.author
+                        == self.get_user(self._discord_account_id),
+                        timeout=30,
+                    )
+                    await asyncio.gather(
+                        instructions.delete(),
+                        message.delete(),
+                        reaction.remove(user),
+                        reaction.message.edit(content=message.content)
+                        if message.content.lower() != "cancel"
+                        else asyncio.sleep(0),
+                    )
+                except asyncio.TimeoutError:
+                    await asyncio.gather(
+                        instructions.delete(), reaction.remove(user),
+                    )

@@ -1,20 +1,14 @@
-import asyncio
 import logging
-import sqlite3
-from typing import List
 
 import discord
 from discord.ext import commands
 
 from .helpers.checks import is_mod
 from .helpers.database import init_db, get_enabled_members
-from .instance.bot import PolyphonyInstance
+from .helpers.helpers import create_member_instance
 from .settings import TOKEN, DEBUG
 
 log = logging.getLogger(__name__)
-
-# List of Instance Threads
-instances: List[PolyphonyInstance] = []
 
 # Main Polyhony Bot Instance
 bot = commands.Bot(command_prefix=";;")
@@ -25,6 +19,9 @@ init_extensions = ["commands.admin", "commands.user"]
 # TODO: Help Messages
 # TODO: ON_ERROR() handling to log to channel
 # TODO: general polyphony channel logging module
+# TODO: Send note on DM
+# TODO: Allow setting nickname override that isn't display_name
+# TODO: Autoproxy (sync up typing status if possible)
 
 
 @bot.event
@@ -43,33 +40,9 @@ async def on_ready():
         log.debug("No members found")
     for member in members:
         create_member_instance(member)
-    log.debug("Member initialization complete.")
+    log.debug(f"Member initialization complete.")
 
     log.info(f"Polyphony started as {bot.user}")
-
-
-def create_member_instance(member: sqlite3.Row):
-    """
-    Create member instance threads from dictionary that is returned from database
-    :param member: directory that is returned from database functions
-    """
-    if not member["member_enabled"]:
-        pass
-    log.debug(
-        f"Creating member instance {member['member_name']} ({member['pk_member_id']})"
-    )
-    new_instance = PolyphonyInstance(
-        member["token"],
-        member["pk_member_id"],
-        member["discord_account_id"],
-        member["member_name"],
-        member["display_name"],
-        member["pk_avatar_url"],
-        member["pk_proxy_tags"],
-    )
-    loop = asyncio.get_event_loop()
-    loop.create_task(new_instance.start(member["token"]))
-    instances.append(new_instance)
 
 
 # Load extensions
@@ -104,7 +77,11 @@ async def reload(ctx: commands.context):
 
                 try:
                     bot.reload_extension(extension)
-                except (ExtensionNotLoaded, ExtensionNotFound, ExtensionFailed) as e:
+                except (
+                    ExtensionNotLoaded,
+                    ExtensionNotFound,
+                    ExtensionFailed,
+                ) as e:
                     log.exception(e)
                     await ctx.send(
                         embed=discord.Embed(

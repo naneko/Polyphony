@@ -8,9 +8,9 @@ from typing import Optional
 import discord
 from discord.ext import commands
 
-from polyphony.bot import instances
 from polyphony.helpers.checks import is_polyphony_user
 from polyphony.helpers.database import c
+from polyphony.helpers.helpers import instances
 
 log = logging.getLogger("polyphony." + __name__)
 
@@ -18,6 +18,8 @@ log = logging.getLogger("polyphony." + __name__)
 class User(commands.Cog):
 
     # TODO: When member instance joins guild, allow a default set of roles to be assigned from settings.py
+
+    # TODO: Slots command: will show how many tokens are available. (maybe also show with register command)
 
     def __init__(self, bot: discord.ext.commands.bot):
         self.bot = bot
@@ -60,7 +62,8 @@ class User(commands.Cog):
         """
         log.debug(f"Listing members for {ctx.author.display_name}...")
         c.execute(
-            "SELECT * FROM members WHERE discord_account_id == ?", [ctx.author.id]
+            "SELECT * FROM members WHERE discord_account_id == ?",
+            [ctx.author.id],
         )
         member_list = c.fetchall()
         embed = discord.Embed(title=f"Members of System")
@@ -71,11 +74,13 @@ class User(commands.Cog):
 
         inline = True
         for member in member_list:
-            member_user = ctx.guild.get_member_named(f"p.{member['member_name']}")
+            member_user = ctx.guild.get_member_named(
+                f"p.{member['member_name']}"
+            )
             owner_user = ctx.guild.get_member(member["discord_account_id"])
             embed.add_field(
                 name=member["display_name"],
-                value=f"""User: {member_user.mention}\nPluralKit Member ID: `{member['pk_member_id']}`""",
+                value=f"""User: {member_user.mention}\nPluralKit Member ID: `{member['pk_member_id']}`\nEnabled: `{"Yes" if member['member_enabled'] else "No"}`""",
                 inline=inline,
             )
             inline = not inline
@@ -88,17 +93,19 @@ class User(commands.Cog):
         """
         ping: Pings the core bot
 
-        TODO: Also ping all system member instances for the given user
-
         :param ctx: Discord Context
         """
         await ctx.send(
-            embed=discord.Embed(title=f"Pong ({timedelta(seconds=self.bot.latency)})")
+            embed=discord.Embed(
+                title=f"Pong ({timedelta(seconds=self.bot.latency)})"
+            )
         )
 
     @commands.command()
     @is_polyphony_user()
-    async def role(self, ctx: commands.context, system_member: discord.Member = None):
+    async def role(
+        self, ctx: commands.context, system_member: discord.Member = None
+    ):
         """
         role add/remove [system member]: Enters role edit mode by saving current roles in memory and then syncing any changes with the member instance. Run again with no arguments or wait 5 minutes to retore user roles.
 
@@ -132,7 +139,9 @@ class User(commands.Cog):
     @commands.command(name="del")
     @is_polyphony_user()
     async def delete(
-        self, ctx: commands.context, message_id: Optional[discord.Message] = None
+        self,
+        ctx: commands.context,
+        message_id: Optional[discord.Message] = None,
     ):
         """
         del (id): Deletes the last message unless a message ID parameter is provided. Can be run multiple times. n max limited by config.
