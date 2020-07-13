@@ -49,6 +49,11 @@ def get_enabled_members() -> List[sqlite3.Row]:
     return c.fetchall()
 
 
+def get_member_by_discord_id(discord_bot_account_id: int) -> sqlite3.Row:
+    c.execute("SELECT * FROM members WHERE member_account_id = ?", [discord_bot_account_id])
+    return c.fetchone()
+
+
 def get_users() -> List[sqlite3.Row]:
     c.execute("SELECT * FROM users")
     log.debug("Fetching users from database")

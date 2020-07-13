@@ -21,8 +21,9 @@ from polyphony.helpers.database import (
     get_token,
     insert_token,
     c,
+    get_member_by_discord_id,
 )
-from polyphony.helpers.helpers import LogMessage
+from polyphony.helpers.helpers import LogMessage, instances
 from polyphony.helpers.pluralkit import pk_get_member
 from polyphony.settings import DEFAULT_INSTANCE_PERMS, MODERATOR_ROLES
 
@@ -39,13 +40,13 @@ class Admin(commands.Cog):
     @commands.command()
     @is_mod()
     async def list(
-        self, ctx: commands.context, arg1: Union[discord.Member, str] = None
+        self, ctx: commands.context, argument: Union[discord.Member, str] = None
     ):
         """
-        list: Shows all active Polyphony members sorted by main account
-        list inactive: Shows systems and main accounts that haven’t been used in n number of days defined in the config or at all or where the main user has left the server
-        list [main account]: Lists all polyphony system members for a given main account
-        list all: Lists all Polyphony members registered
+        list                    Shows all active Polyphony members sorted by main account
+        list inactive           Shows systems and main accounts that haven’t been used in n number of days defined in the config or at all or where the main user has left the server
+        list [main account]     Lists all polyphony system members for a given main account
+        list all                Lists all Polyphony members registered
 
         :param ctx: Discord Context
         :param arg1: None/"inactive"/Discord Account
@@ -54,23 +55,27 @@ class Admin(commands.Cog):
         inline = True
         member_list = []
 
-        if arg1 is None:
+        if argument is None:
             log.debug("Listing active members...")
             c.execute("SELECT * FROM members WHERE member_enabled == 1")
             member_list = c.fetchall()
             embed = discord.Embed(title="Active Members")
-        elif isinstance(arg1, discord.Member):
-            log.debug(f"Listing members for {arg1.display_name}...")
-            c.execute("SELECT * FROM members WHERE discord_account_id == ?", [arg1.id])
+        elif isinstance(argument, discord.Member):
+            log.debug(f"Listing members for {argument.display_name}...")
+            c.execute(
+                "SELECT * FROM members WHERE discord_account_id == ?", [argument.id],
+            )
             member_list = c.fetchall()
             embed = discord.Embed(title=f"Members of System")
-            embed.set_author(name=f"{arg1} ({arg1.id})", icon_url=arg1.avatar_url)
-        elif arg1.lower() == "inactive":
+            embed.set_author(
+                name=f"{argument} ({argument.id})", icon_url=argument.avatar_url
+            )
+        elif argument.lower() == "inactive":
             log.debug("Listing inactive members...")
             c.execute("SELECT * FROM members WHERE member_enabled == 0")
             member_list = c.fetchall()
             embed = discord.Embed(title="Inactive Members")
-        elif arg1.lower() == "all":
+        elif argument.lower() == "all":
             log.debug("Listing all members...")
             c.execute("SELECT * FROM members")
             member_list = c.fetchall()
@@ -98,10 +103,10 @@ class Admin(commands.Cog):
     @commands.command()
     @is_mod()
     async def register(
-        self, ctx: commands.context, pk_id: str, account: discord.Member
+        self, ctx: commands.context, pluralkit_member_id: str, account: discord.Member,
     ):
         """
-        register [member id] [main account] (bot token): Creates a new Polyphony member instance
+        Creates a new Polyphony member instance
 
         :param ctx: Discord Context
         :param account: Main Account to be extended from
@@ -115,7 +120,7 @@ class Admin(commands.Cog):
 
         async with ctx.channel.typing():
             await logger.log("Fetching member from PluralKit...")
-            member = await pk_get_member(pk_id)
+            member = await pk_get_member(pluralkit_member_id)
             if member is not None:
                 system_names = [f"{member['name']} (`{member['id']}`)"]
                 await logger.log(
@@ -136,7 +141,7 @@ class Admin(commands.Cog):
                         f"{account.mention} is a new user! Registering them with Polyphony"
                     )
                     insert_user(account.id)
-                if get_member(pk_id) is None:
+                if get_member(pluralkit_member_id) is None:
                     insert_member(
                         bot_token["token"],
                         member["id"],
@@ -153,7 +158,7 @@ class Admin(commands.Cog):
                     logger.title = "Member Already Registered with Polyphony"
                     logger.color = discord.Color.light_grey()
                     await logger.log(
-                        f"Member ID `{pk_id}` was already registered with Polyphony"
+                        f"Member ID `{pluralkit_member_id}` was already registered with Polyphony"
                     )
                     return
                 await logger.log("Creating member instance...")
@@ -161,7 +166,7 @@ class Admin(commands.Cog):
             else:
                 logger.title = "Error Registering: Member ID invalid"
                 logger.color = discord.Color.red()
-                await logger.log(f"Member ID `{pk_id}` was not found")
+                await logger.log(f"Member ID `{pluralkit_member_id}` was not found")
                 return
 
         confirmation = BotConfirmation(ctx, discord.Color.blue())
@@ -180,6 +185,9 @@ class Admin(commands.Cog):
 
         logger.title = "Registration Successful"
         logger.color = discord.Color.green()
+        c.execute("SELECT * FROM tokens WHERE used = 0")
+        slots = c.fetchall()
+        await logger.log(f"There are now {len(slots)} slots available")
         await logger.log("\n*Generate an invite link using `invite [Client ID]`*")
         log.info("New member instance extended and activated")
         embed = discord.Embed(color=discord.Color.green())
@@ -193,7 +201,7 @@ class Admin(commands.Cog):
     @is_mod()
     async def invite(self, ctx: commands.context, client_id: str):
         """
-        invite [client id]: Generates an invite link with pre-set permissions from client ID.
+        Generates an invite link with pre-set permissions from a client ID.
 
         :param ctx: Discord Context
         :param client_id: Bot Client ID
@@ -214,32 +222,74 @@ class Admin(commands.Cog):
     @is_mod()
     async def suspend(self, ctx: commands.context, system_member: discord.Member):
         """
-        suspend [system member]: Sets member_enabled to false. Pulls the member instance offline.
+        Pulls the member instance offline.
 
         :param ctx: Discord Context
         :param system_member: System Member
         """
-        # TODO: Implement
-        await ctx.send("Suspend command unimplemented")
-        log.warning("Suspend command unimplemented")
+        # TODO: Provide more verbose feedback from command
+        for i, instance in enumerate(instances):
+            if instance.user.id == system_member.id:
+                await instance.close()
+                c.execute(
+                    "UPDATE members SET member_enabled = 0 WHERE token = ?",
+                    [instance.get_token()],
+                )
+                del instances[i]
+                await ctx.send(f"{system_member.mention} suspended")
+                log.info(f"{system_member} has been suspended by {ctx.message.author}")
+
+    @commands.command()
+    @is_mod()
+    async def start(self, ctx: commands.context, system_member: discord.Member):
+        """
+        Starts a suspended instance
+
+        :param ctx: Discord Context
+        :param system_member: System Member
+        """
+        # TODO: Provide more verbose feedback from command
+        member = get_member_by_discord_id(system_member.id)
+        if member:
+            c.execute(
+                "UPDATE members SET member_enabled = 1 WHERE member_account_id = ?",
+                [system_member.id],
+            )
+            instances.append(create_member_instance(member))
+            await ctx.send(f"{system_member.mention} started")
+            log.info(f"{system_member} has been started by {ctx.message.author}")
 
     @commands.command()
     @is_mod()
     async def disable(self, ctx: commands.context, system_member: discord.Member):
         """
-        disable [system member]: Disables a system member by deleting it from the database and kicking it from the server. Bot token cannot be reused.
+        Disables a system member permanently by deleting it from the database and kicking it from the server. Bot token cannot be reused.
 
         :param ctx: Discord Context
         :param system_member: System Member
         """
-        # TODO: Implement
-        await ctx.send("Disable command unimplemented")
-        log.warning("Disable command unimplemented")
+        # TODO: Provide more verbose feedback from command
+        instance = get_member_by_discord_id(system_member.id)
+        if instance:
+            confirmation = BotConfirmation(ctx, discord.Color.red())
+            await confirmation.confirm(f"Disable member {system_member} permanently?")
+            if confirmation.confirmed:
+                c.execute(
+                    "DELETE FROM members WHERE token = ?", [instance["token"]],
+                )
+                await self.suspend(ctx, system_member)
+                await ctx.send(f"{system_member.mention} disabled permanently")
+                log.info(
+                    f"{system_member} has been disabled permanently by {ctx.message.author}"
+                )
+            else:
+                await confirmation.message.delete()
+                await ctx.send(f"{system_member.mention} was __not__ disabled")
 
     @commands.command()
     async def tokens(self, ctx: commands.context, *tokens: str):
         """
-        tokens [token] (more tokens...): Add tokens to queue
+        Add tokens to queue
 
         :param ctx: Discord Context
         :param tokens: List of tokens
@@ -272,7 +322,11 @@ class Admin(commands.Cog):
                         insert_token(token, False)
                         logger.title = f"Bot token {index} added"
                         logger.color = discord.Color.green()
-                        await logger.send(None)
+                        c.execute("SELECT * FROM tokens WHERE used = 0")
+                        slots = c.fetchall()
+                        await logger.send(
+                            f"There are now {len(slots)} slot(s) available"
+                        )
                     else:
                         logger.title = f"Token {index} already in database"
                         logger.color = discord.Color.orange()
