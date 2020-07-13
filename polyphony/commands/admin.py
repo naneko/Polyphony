@@ -63,8 +63,7 @@ class Admin(commands.Cog):
         elif isinstance(argument, discord.Member):
             log.debug(f"Listing members for {argument.display_name}...")
             c.execute(
-                "SELECT * FROM members WHERE discord_account_id == ?",
-                [argument.id],
+                "SELECT * FROM members WHERE discord_account_id == ?", [argument.id],
             )
             member_list = c.fetchall()
             embed = discord.Embed(title=f"Members of System")
@@ -90,9 +89,7 @@ class Admin(commands.Cog):
             embed.add_field(name="No members where found")
 
         for member in member_list:
-            member_user = ctx.guild.get_member_named(
-                f"p.{member['member_name']}"
-            )
+            member_user = ctx.guild.get_member_named(f"p.{member['member_name']}")
             owner_user = ctx.guild.get_member(member["discord_account_id"])
             embed.add_field(
                 name=member["display_name"],
@@ -106,10 +103,7 @@ class Admin(commands.Cog):
     @commands.command()
     @is_mod()
     async def register(
-        self,
-        ctx: commands.context,
-        pluralkit_member_id: str,
-        account: discord.Member,
+        self, ctx: commands.context, pluralkit_member_id: str, account: discord.Member,
     ):
         """
         Creates a new Polyphony member instance
@@ -172,9 +166,7 @@ class Admin(commands.Cog):
             else:
                 logger.title = "Error Registering: Member ID invalid"
                 logger.color = discord.Color.red()
-                await logger.log(
-                    f"Member ID `{pluralkit_member_id}` was not found"
-                )
+                await logger.log(f"Member ID `{pluralkit_member_id}` was not found")
                 return
 
         confirmation = BotConfirmation(ctx, discord.Color.blue())
@@ -193,9 +185,10 @@ class Admin(commands.Cog):
 
         logger.title = "Registration Successful"
         logger.color = discord.Color.green()
-        await logger.log(
-            "\n*Generate an invite link using `invite [Client ID]`*"
-        )
+        c.execute("SELECT * FROM tokens WHERE used = 0")
+        slots = c.fetchall()
+        await logger.log(f"There are now {len(slots)} slots available")
+        await logger.log("\n*Generate an invite link using `invite [Client ID]`*")
         log.info("New member instance extended and activated")
         embed = discord.Embed(color=discord.Color.green())
         embed.set_author(
@@ -227,9 +220,7 @@ class Admin(commands.Cog):
 
     @commands.command()
     @is_mod()
-    async def suspend(
-        self, ctx: commands.context, system_member: discord.Member
-    ):
+    async def suspend(self, ctx: commands.context, system_member: discord.Member):
         """
         Pulls the member instance offline.
 
@@ -246,9 +237,7 @@ class Admin(commands.Cog):
                 )
                 del instances[i]
                 await ctx.send(f"{system_member.mention} suspended")
-                log.info(
-                    f"{system_member} has been suspended by {ctx.message.author}"
-                )
+                log.info(f"{system_member} has been suspended by {ctx.message.author}")
 
     @commands.command()
     @is_mod()
@@ -268,15 +257,11 @@ class Admin(commands.Cog):
             )
             instances.append(create_member_instance(member))
             await ctx.send(f"{system_member.mention} started")
-            log.info(
-                f"{system_member} has been started by {ctx.message.author}"
-            )
+            log.info(f"{system_member} has been started by {ctx.message.author}")
 
     @commands.command()
     @is_mod()
-    async def disable(
-        self, ctx: commands.context, system_member: discord.Member
-    ):
+    async def disable(self, ctx: commands.context, system_member: discord.Member):
         """
         Disables a system member permanently by deleting it from the database and kicking it from the server. Bot token cannot be reused.
 
@@ -287,9 +272,7 @@ class Admin(commands.Cog):
         instance = get_member_by_discord_id(system_member.id)
         if instance:
             confirmation = BotConfirmation(ctx, discord.Color.red())
-            await confirmation.confirm(
-                f"Disable member {system_member} permanently?"
-            )
+            await confirmation.confirm(f"Disable member {system_member} permanently?")
             if confirmation.confirmed:
                 c.execute(
                     "DELETE FROM members WHERE token = ?", [instance["token"]],
@@ -339,24 +322,23 @@ class Admin(commands.Cog):
                         insert_token(token, False)
                         logger.title = f"Bot token {index} added"
                         logger.color = discord.Color.green()
-                        await logger.send(None)
+                        c.execute("SELECT * FROM tokens WHERE used = 0")
+                        slots = c.fetchall()
+                        await logger.send(
+                            f"There are now {len(slots)} slot(s) available"
+                        )
                     else:
                         logger.title = f"Token {index} already in database"
                         logger.color = discord.Color.orange()
                         await logger.log("Bot token already in database")
         elif ctx.channel.type is not discord.ChannelType.private:
             ctx.message.delete()
-            if any(
-                role.name in MODERATOR_ROLES
-                for role in ctx.message.author.roles
-            ):
+            if any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
                 await ctx.message.author.send(
                     f"Token mode enabled for 5 minutes. Add tokens with `{self.bot.command_prefix}tokens [token] (more tokens...)` right here.\n\n*Don't paste a bot token in a server*"
                 )
                 await session(self, ctx.message.author)
-        elif any(
-            role.name in MODERATOR_ROLES for role in ctx.message.author.roles
-        ):
+        elif any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
             ctx.message.delete()
             await ctx.channel.send(
                 f"To add tokens, execute `{self.bot.command_prefix}tokens` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `{self.bot.command_prefix}tokens [token] (more tokens...)`\n\n*Seriously don't paste a bot token in a server*"

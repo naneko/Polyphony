@@ -16,7 +16,7 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX)
 # Default Cog Extensions to be loaded
 init_extensions = ["commands.admin", "commands.user"]
 
-# TODO: Help Messages
+# TODO: Better Help Messages
 # TODO: ON_ERROR() handling
 # TODO: general polyphony channel logging module
 # TODO: Send redirect note on DM

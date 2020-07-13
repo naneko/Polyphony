@@ -18,8 +18,6 @@ log = logging.getLogger("polyphony." + __name__)
 
 class User(commands.Cog):
 
-    # TODO: When member instance joins guild, allow a default set of roles to be assigned from settings.py
-
     # TODO: Slots command: will show how many tokens are available. (maybe also show with register command)
 
     def __init__(self, bot: discord.ext.commands.bot):
@@ -29,6 +27,34 @@ class User(commands.Cog):
 
     def cog_unload(self):
         self.sync_roles.cancel()
+
+    @commands.command()
+    @is_polyphony_user()
+    # @commands.cooldown(1, 10)
+    async def slots(self, ctx: commands.context):
+        """
+        Show number of slots available
+
+        :param ctx: Discord Context
+        """
+        await ctx.message.delete()
+        c.execute("SELECT * FROM tokens WHERE used = 0")
+        slots = c.fetchall()
+        if len(slots) == 0:
+            embed = discord.Embed(
+                title=f"Sorry, there are currently no slots available",
+                description="Contact a moderator",
+            )
+        elif 2 > len(slots) > 1:
+            embed = discord.Embed(
+                title=f"There is 1 slot available.", color=discord.Color.green()
+            )
+        elif len(slots) > 2:
+            embed = discord.Embed(
+                title=f"There are {len(slots)} slots available",
+                color=discord.Color.green(),
+            )
+        await ctx.channel.send(embed=embed)
 
     @commands.command()
     @is_polyphony_user()
