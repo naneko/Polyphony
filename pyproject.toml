@@ -7,7 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-discord-py = "~1.3.3"
+discord-py = "~1.3.4"
 python-dotenv = "^0.13.0"
 disputils = "^0.1.3"
 requests = "^2.23.0"

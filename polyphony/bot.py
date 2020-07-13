@@ -6,20 +6,20 @@ from discord.ext import commands
 from .helpers.checks import is_mod
 from .helpers.database import init_db, get_enabled_members
 from .helpers.helpers import create_member_instance
-from .settings import TOKEN, DEBUG
+from .settings import TOKEN, DEBUG, COMMAND_PREFIX
 
 log = logging.getLogger(__name__)
 
 # Main Polyhony Bot Instance
-bot = commands.Bot(command_prefix=";;")
+bot = commands.Bot(command_prefix=COMMAND_PREFIX)
 
 # Default Cog Extensions to be loaded
 init_extensions = ["commands.admin", "commands.user"]
 
 # TODO: Help Messages
-# TODO: ON_ERROR() handling to log to channel
+# TODO: ON_ERROR() handling
 # TODO: general polyphony channel logging module
-# TODO: Send note on DM
+# TODO: Send redirect note on DM
 # TODO: Allow setting nickname override that isn't display_name
 # TODO: Autoproxy (sync up typing status if possible)
 
@@ -77,11 +77,7 @@ async def reload(ctx: commands.context):
 
                 try:
                     bot.reload_extension(extension)
-                except (
-                    ExtensionNotLoaded,
-                    ExtensionNotFound,
-                    ExtensionFailed,
-                ) as e:
+                except (ExtensionNotLoaded, ExtensionNotFound, ExtensionFailed,) as e:
                     log.exception(e)
                     await ctx.send(
                         embed=discord.Embed(

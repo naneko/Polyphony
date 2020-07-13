@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 # List of Instance Threads
 instances: List[PolyphonyInstance] = []
 
+
 class LogMessage:
     def __init__(self, ctx: commands.Context, title="Loading..."):
         self.message = None
@@ -27,7 +28,9 @@ class LogMessage:
         log.debug("LogMessage Instance Created.")
 
     async def send(self, message):
-        embed = discord.Embed(title=self.title, description=message, color=self.color)
+        embed = discord.Embed(
+            title=self.title, description=message, color=self.color
+        )
         if self.message is None:
             self.message = await self.ctx.send(embed=embed)
         else:
