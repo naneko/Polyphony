@@ -2,8 +2,8 @@
 User commands to configure Polyphony
 """
 import asyncio
+import json
 import logging
-import pickle
 from datetime import timedelta
 from typing import Optional
 
@@ -216,7 +216,7 @@ class User(commands.Cog):
             owner_user = ctx.guild.get_member(member["discord_account_id"])
             embed.add_field(
                 name=dict(member).get("display_name", member["member_name"]),
-                value=f"""**User:** {member_user.mention}\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Prefix:** `{pickle.loads(member['pk_proxy_tags'])['prefix']}`\n**Suffix:** `{pickle.loads(member['pk_proxy_tags'])['suffix']}`\n**Enabled:** `{"Yes" if member['member_enabled'] else "No"}`""",
+                value=f"""**User:** {member_user.mention}\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Prefix:** `{json.loads(member['pk_proxy_tags'])['prefix']}`\n**Suffix:** `{json.loads(member['pk_proxy_tags'])['suffix']}`\n**Enabled:** `{"Yes" if member['member_enabled'] else "No"}`""",
                 inline=inline > 0,
             )
             inline = (inline + 1) % 3

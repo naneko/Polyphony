@@ -3,10 +3,9 @@ Contains all database functions.
 
 SQL should only exist in this file
 """
-
+import json
 import logging
 import pathlib
-import pickle
 import sqlite3
 from typing import List
 
@@ -50,7 +49,9 @@ def get_enabled_members() -> List[sqlite3.Row]:
 
 
 def get_member_by_discord_id(discord_bot_account_id: int) -> sqlite3.Row:
-    c.execute("SELECT * FROM members WHERE member_account_id = ?", [discord_bot_account_id])
+    c.execute(
+        "SELECT * FROM members WHERE member_account_id = ?", [discord_bot_account_id]
+    )
     return c.fetchone()
 
 
@@ -141,7 +142,7 @@ def insert_member(
                 member_name,
                 display_name,
                 pk_avatar_url,
-                pickle.dumps(pk_proxy_tags),
+                json.dumps(pk_proxy_tags),
                 pk_keep_proxy,
                 member_enabled,
             ],

@@ -2,8 +2,8 @@
 Instances are individual bots that are created with the purpose.
 """
 import asyncio
+import json
 import logging
-import pickle
 import time
 from datetime import timedelta
 
@@ -41,7 +41,7 @@ class PolyphonyInstance(discord.Client):
         :param member_name: Expecting member name from database
         :param display_name: Expecting display name from database
         :param pk_avatar_url: Expecting URL from database
-        :param pk_proxy_tags: Expecting pickled value from database
+        :param pk_proxy_tags: Expecting json string from database
         :param options:
         """
         super().__init__(**options)
@@ -51,7 +51,7 @@ class PolyphonyInstance(discord.Client):
         self.__member_name: str = member_name
         self.__display_name: str = display_name
         self.__pk_avatar_url: str = pk_avatar_url
-        self.__pk_proxy_tags: dict = pickle.loads(pk_proxy_tags)
+        self.__pk_proxy_tags: dict = json.loads(pk_proxy_tags)
 
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
@@ -197,7 +197,7 @@ class PolyphonyInstance(discord.Client):
             )
             c.execute(
                 "UPDATE members SET pk_proxy_tags = ? WHERE token = ?",
-                [pickle.dumps(value), self._token],
+                [json.dumps(value), self._token],
             )
 
     def get_token(self):
