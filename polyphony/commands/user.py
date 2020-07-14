@@ -3,13 +3,14 @@ User commands to configure Polyphony
 """
 import asyncio
 import logging
+import pickle
 from datetime import timedelta
 from typing import Optional
 
 import discord
 from discord.ext import commands, tasks
 
-from polyphony.helpers.checks import is_polyphony_user
+from polyphony.helpers.checks import is_polyphony_user, is_mod
 from polyphony.helpers.database import c
 from polyphony.helpers.helpers import instances
 
@@ -27,6 +28,110 @@ class User(commands.Cog):
 
     def cog_unload(self):
         self.sync_roles.cancel()
+
+    @commands.group()
+    @is_polyphony_user(allow_mods=True)
+    async def help(self, ctx: commands.context):
+        if ctx.invoked_subcommand is None:
+            embed = discord.Embed(
+                title="Polyphony Quick Start",
+                name="Polyphony is an extension of PluralKit that allows more control for everyone.",
+            )
+            embed.add_field(
+                name=":pencil: __Editing and deleting messages__",
+                value="**__Editing__**"
+                "\n**- Method 1:** React with :pencil: to the message and then type your edit"
+                "\n**- Method 2:** Type `;;edit <message>` to edit last message sent by a system member"
+                "\n**- Method 3:** Type `;;edit (message id) <message> ` to edit a message by it's id"
+                "\n\n**__Deleting__**"
+                "\n**- Method 1:** React with :x: on the message"
+                "\n**- Method 2:** Type `;;del` to delete the last message sent by a system member"
+                "\n**- Method 3:** Type `;;del` to delete a message by id"
+                "\n\n[How to get the ID]"
+                "(https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-)"
+                "\n*Method 1 may not work on older messages*",
+                inline=False,
+            )
+            embed.add_field(
+                name=":inbox_tray: __Syncing from PluralKit__",
+                value="`;;sync` will sync changes for all your members",
+                inline=False,
+            )
+            embed.add_field(
+                name=":information_source: __More Help__",
+                value="`;;help user` to get the full command list for Polyphony users"
+                "\n`;;help admin` to get the full command list for Moderators *(Moderators Only)*",
+            )
+            await ctx.channel.send(embed=embed)
+
+    @help.command()
+    async def user(self, ctx: commands.context):
+        embed = discord.Embed(
+            title="Polyphony User Help",
+            description="Polyphony uses your prefix and suffix from PluralKit. Unlike PluralKit,"
+            "system members can be pinged directly. That ping will automatically be"
+            "forwarded to the main account.",
+            inline=False,
+        )
+        embed.add_field(
+            name=":pencil: `;;edit (message id) <message>`",
+            value="**Edits a message**"
+            "\nIf you don't include an ID, it will edit the last message sent by a system member."
+            "\n[How to get a message ID]"
+            "(https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-)",
+            inline=False,
+        )
+        embed.add_field(
+            name=":x: `;;del (message id)`",
+            value="**Deletes a message**"
+            "\nIf you don't include an ID, it will delete the last message sent by a system member."
+            "\n[How to get a message ID]"
+            "(https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-)",
+            inline=False,
+        )
+        embed.add_field(
+            name=":inbox_tray: `;;sync`",
+            value="**Syncs information from PluralKit for all members**"
+            "\n*Tip: Setting a display name in PluralKit will set a nickname that is different from the bot username*",
+            inline=False,
+        )
+        embed.add_field(
+            name=":question: `;;whoarewe`",
+            value="Get a list of all the members you have registered with Polyphony",
+            inline=False,
+        )
+        embed.add_field(
+            name=":grey_question: `;;whois <Polyphony member user>`",
+            value="Get information about any Polyphony member user"
+            "\n*This command can be used by anyone*",
+            inline=False,
+        )
+        embed.add_field(
+            name=":bulb: `;;rolesync <Polyphony member user>`",
+            value="**This enables role sync mode.** This will temporarily remove all roles from the main user and "
+            "replace them with the system member's roles. Any roles you assign to yourself (the main user) will be "
+            "synced with the system member. Type `done` and your main user's original roles will be restored.\n"
+            "*This command will auto timeout after one minute. If it times out, the changes will not be saved.*",
+            inline=False,
+        )
+        embed.add_field(
+            name=":mag: `;;slots`",
+            value="Show the number of free slots available for new members to be registered with Polyphony",
+            inline=False,
+        )
+        embed.add_field(
+            name=":stopwatch: `;;ping`",
+            value="Check if Polyphony, and hence Polyphony member users, is online and functioning",
+            inline=False,
+        )
+        await ctx.channel.send(embed=embed)
+
+    @help.command()
+    @is_mod()
+    async def admin(self, ctx: commands.context):
+        await ctx.channel.send(
+            "Ask Kiera for now. She is going to add this help menu soon."
+        )
 
     @commands.command()
     @is_polyphony_user()
@@ -74,7 +179,7 @@ class User(commands.Cog):
         for instance in instances:
             if instance._discord_account_id == ctx.author.id:
                 await instance.sync()
-                embed = discord.Embed(color=discord.Color.purple())
+                embed = discord.Embed(color=discord.Color.green())
                 embed.set_author(
                     name=str(instance.user), icon_url=instance.pk_avatar_url,
                 )
@@ -101,18 +206,20 @@ class User(commands.Cog):
         embed.set_author(name=f"{ctx.author}", icon_url=ctx.author.avatar_url)
 
         if member_list is None:
-            embed.add_field(name="No members where found")
+            embed.add_field(
+                name="No members where found", value="Ask a mod to add some!"
+            )
 
-        inline = True
+        inline = 1
         for member in member_list:
             member_user = ctx.guild.get_member_named(f"p.{member['member_name']}")
             owner_user = ctx.guild.get_member(member["discord_account_id"])
             embed.add_field(
-                name=member["display_name"],
-                value=f"""User: {member_user.mention}\nPluralKit Member ID: `{member['pk_member_id']}`\nEnabled: `{"Yes" if member['member_enabled'] else "No"}`""",
-                inline=inline,
+                name=dict(member).get("display_name", member["member_name"]),
+                value=f"""**User:** {member_user.mention}\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Prefix:** `{pickle.loads(member['pk_proxy_tags'])['prefix']}`\n**Suffix:** `{pickle.loads(member['pk_proxy_tags'])['suffix']}`\n**Enabled:** `{"Yes" if member['member_enabled'] else "No"}`""",
+                inline=inline > 0,
             )
-            inline = not inline
+            inline = (inline + 1) % 3
 
         await ctx.send(embed=embed)
 

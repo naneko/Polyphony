@@ -22,6 +22,7 @@ from polyphony.helpers.database import (
     insert_token,
     c,
     get_member_by_discord_id,
+    conn,
 )
 from polyphony.helpers.helpers import LogMessage, instances
 from polyphony.helpers.pluralkit import pk_get_member
@@ -51,10 +52,6 @@ class Admin(commands.Cog):
         :param ctx: Discord Context
         :param arg1: None/"inactive"/Discord Account
         """
-        embed = discord.Embed()
-        inline = True
-        member_list = []
-
         if argument is None:
             log.debug("Listing active members...")
             c.execute("SELECT * FROM members WHERE member_enabled == 1")
@@ -88,15 +85,16 @@ class Admin(commands.Cog):
         if member_list is None:
             embed.add_field(name="No members where found")
 
+        inline = 1
         for member in member_list:
             member_user = ctx.guild.get_member_named(f"p.{member['member_name']}")
             owner_user = ctx.guild.get_member(member["discord_account_id"])
             embed.add_field(
-                name=member["display_name"],
-                value=f"""User: {member_user.mention} (`{member_user.id}`)\nAccount Owner: {owner_user.mention} (`{owner_user.id}`)\nPluralKit Member ID: `{member['pk_member_id']}`\nEnabled: `{bool(member['member_enabled'])}`""",
-                inline=inline,
+                name=dict(member).get("display_name", member["member_name"]),
+                value=f"""**User:** {member_user.mention} (`{member_user.id}`)\n**Account Owner:** {owner_user.mention if hasattr(owner_user, 'mention') else "*Unable to get User*"} (`{member["discord_account_id"]}`)\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Enabled:** `{bool(member['member_enabled'])}`""",
+                inline=inline > 0,
             )
-            inline = not inline
+            inline = (inline + 1) % 3
 
         await ctx.send(embed=embed)
 
@@ -171,7 +169,7 @@ class Admin(commands.Cog):
 
         confirmation = BotConfirmation(ctx, discord.Color.blue())
         await confirmation.confirm(
-            f"Create member for {account} with member(s) {', '.join(system_names)}?"
+            f"Create member for {account} with member {', '.join(system_names)}?"
         )
         if confirmation.confirmed:
             await confirmation.message.delete()
@@ -192,7 +190,7 @@ class Admin(commands.Cog):
         log.info("New member instance extended and activated")
         embed = discord.Embed(color=discord.Color.green())
         embed.set_author(
-            name=f"{member['display_name']} (p.{member['member_name']})",
+            name=f"{dict(member).get('display_name', member['member_name'])} (p.{member['member_name']})",
             icon_url=member["avatar_url"],
         )
         await ctx.send(embed=embed)
@@ -231,10 +229,11 @@ class Admin(commands.Cog):
         for i, instance in enumerate(instances):
             if instance.user.id == system_member.id:
                 await instance.close()
-                c.execute(
-                    "UPDATE members SET member_enabled = 0 WHERE token = ?",
-                    [instance.get_token()],
-                )
+                with conn:
+                    c.execute(
+                        "UPDATE members SET member_enabled = 0 WHERE token = ?",
+                        [instance.get_token()],
+                    )
                 del instances[i]
                 await ctx.send(f"{system_member.mention} suspended")
                 log.info(f"{system_member} has been suspended by {ctx.message.author}")
@@ -271,20 +270,25 @@ class Admin(commands.Cog):
         # TODO: Provide more verbose feedback from command
         instance = get_member_by_discord_id(system_member.id)
         if instance:
+            log.debug(f"Disabling {system_member}")
             confirmation = BotConfirmation(ctx, discord.Color.red())
             await confirmation.confirm(f"Disable member {system_member} permanently?")
             if confirmation.confirmed:
-                c.execute(
-                    "DELETE FROM members WHERE token = ?", [instance["token"]],
-                )
+                await confirmation.message.delete()
+                with conn:
+                    c.execute(
+                        "DELETE FROM members WHERE token = ?", [instance["token"]],
+                    )
                 await self.suspend(ctx, system_member)
                 await ctx.send(f"{system_member.mention} disabled permanently")
                 log.info(
                     f"{system_member} has been disabled permanently by {ctx.message.author}"
                 )
+                log.debug(f"Disabled {system_member}")
             else:
                 await confirmation.message.delete()
                 await ctx.send(f"{system_member.mention} was __not__ disabled")
+                log.debug(f"Canceled disable of {system_member}")
 
     @commands.command()
     async def tokens(self, ctx: commands.context, *tokens: str):
@@ -332,7 +336,7 @@ class Admin(commands.Cog):
                         logger.color = discord.Color.orange()
                         await logger.log("Bot token already in database")
         elif ctx.channel.type is not discord.ChannelType.private:
-            ctx.message.delete()
+            await ctx.message.delete()
             if any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
                 await ctx.message.author.send(
                     f"Token mode enabled for 5 minutes. Add tokens with `{self.bot.command_prefix}tokens [token] (more tokens...)` right here.\n\n*Don't paste a bot token in a server*"

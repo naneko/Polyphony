@@ -24,10 +24,9 @@ except ImportError:
 DEBUG = os.getenv("DEBUG")
 TOKEN = os.getenv("TOKEN")
 DATABASE_URI = os.getenv("DATABASE_URI")
-MESSAGE_CACHE_SIZE = os.getenv("MESSAGE_CACHE_SIZE", 20)
 MODERATOR_ROLES = os.getenv("MODERATOR_ROLES", ["Moderator", "Moderators"])
 DEFAULT_INSTANCE_PERMS = os.getenv("DEFAULT_INSTANCE_PERMS", 0)
-SUSPEND_ON_LEAVE = os.getenv("SUSPEND_ON_LEAVE", True)
+SUSPEND_ON_LEAVE = os.getenv("SUSPEND_ON_LEAVE", True)  # TODO: Implement
 SUSPEND_INACTIVE_DAYS = os.getenv("SUSPEND_INACTIVE_DAYS", 14)
 LOGGING_CHANNEL_ID = os.getenv("LOGGING_CHANNEL_ID")
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ";;")

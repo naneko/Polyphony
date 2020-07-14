@@ -13,6 +13,9 @@ log = logging.getLogger(__name__)
 # Main Polyhony Bot Instance
 bot = commands.Bot(command_prefix=COMMAND_PREFIX)
 
+# Disable default help
+bot.remove_command("help")
+
 # Default Cog Extensions to be loaded
 init_extensions = ["commands.admin", "commands.user"]
 

@@ -59,24 +59,35 @@ class PolyphonyInstance(discord.Client):
             f"Instance started as {self.user} ({self._pk_member_id}). Initializing..."
         )
         self.member_name: str = self.__member_name
-        self.display_name: str = self.__display_name
+        if self.__display_name:
+            self.display_name: str = self.__display_name
+        else:
+            self.display_name: str = self.__member_name
         self.pk_avatar_url: str = self.__pk_avatar_url
         self.pk_proxy_tags: dict = self.__pk_proxy_tags
         await self.user.edit(username=self._member_name)
         for guild in self.guilds:
             await guild.get_member(self.user.id).edit(nick=self._display_name)
         self_user = self.get_user(self._discord_account_id)
-        await self.change_presence(
-            activity=discord.Activity(
-                name=f"{self_user.name}#{self_user.discriminator}",
-                type=discord.ActivityType.listening,
+        if self_user:
+            await self.change_presence(
+                activity=discord.Activity(
+                    name=f"{self_user.name}#{self_user.discriminator}",
+                    type=discord.ActivityType.listening,
+                )
             )
-        )
+        else:
+            # TODO: Member user has left the server
+            log.warning(
+                f"The main account for {self.user} ({self._pk_member_id}) has left all guilds with Polyphony"
+            )
         with conn:
-            log.debug(f"{self._pk_member_id}: Updating Display Name")
+            log.debug(
+                f"{self.user} ({self._pk_member_id}): Updating Self Account ID: {self.user.id}"
+            )
             c.execute(
-                "UPDATE members SET member_account_id = ? WHERE token = ?",
-                [self.user.id, self._token],
+                "UPDATE members SET member_account_id = ? WHERE pk_member_id = ?",
+                [self.user.id, self._pk_member_id],
             )
         log.info(f"{self.user} ({self._pk_member_id}): Initialization complete")
 
@@ -155,7 +166,7 @@ class PolyphonyInstance(discord.Client):
         """
         self._display_name = value
         with conn:
-            log.debug(f"{self._pk_member_id}: Updating Display Name")
+            log.debug(f"{self.user} ({self._pk_member_id}): Updating Display Name")
             c.execute(
                 "UPDATE members SET display_name = ? WHERE token = ?",
                 [value, self._token],
