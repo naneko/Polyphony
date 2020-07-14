@@ -50,7 +50,7 @@ async def on_ready():
 
 # Load extensions
 log.debug("Loading default extensions...")
-if DEBUG:
+if DEBUG is True:
     log.info("=== DEBUG MODE ENABLED ===")
     init_extensions.append("commands.debug")
 for ext in init_extensions:
@@ -69,7 +69,7 @@ async def reload(ctx: commands.context):
     """
     # TODO: Restart Instances
     async with ctx.channel.typing():
-        if DEBUG:
+        if DEBUG is True:
             log.info("Reloading Extensions...")
             for extension in init_extensions:
                 from discord.ext.commands import (

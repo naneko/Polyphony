@@ -21,7 +21,7 @@ except ImportError:
     logging.debug("python-dotenv not loaded. Hope you set your environment variables.")
 
 # Get config from environment variables (returns none if not found)
-DEBUG = os.getenv("DEBUG")
+DEBUG = os.getenv("DEBUG", False)
 TOKEN = os.getenv("TOKEN")
 DATABASE_URI = os.getenv("DATABASE_URI")
 MODERATOR_ROLES = os.getenv("MODERATOR_ROLES", ["Moderator", "Moderators"])
@@ -32,7 +32,7 @@ LOGGING_CHANNEL_ID = os.getenv("LOGGING_CHANNEL_ID")
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ";;")
 
 # Debug Mode Setup
-if DEBUG:
+if DEBUG is True:
     # Set Logger Level
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger("discord")
@@ -42,6 +42,10 @@ if DEBUG:
     log.info("Debug Mode Enabled")
 else:
     logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger("discord")
+    logger.setLevel(logging.WARN)
+    logger = logging.getLogger("websockets")
+    logger.setLevel(logging.WARN)
 
 # Check for token and exit if not exists
 if TOKEN is None:
