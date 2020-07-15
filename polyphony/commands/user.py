@@ -8,7 +8,7 @@ from datetime import timedelta
 from typing import Optional
 
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 from polyphony.helpers.checks import is_polyphony_user, is_mod
 from polyphony.helpers.database import c
@@ -23,11 +23,6 @@ class User(commands.Cog):
 
     def __init__(self, bot: discord.ext.commands.bot):
         self.bot = bot
-        self.role_sync_users = {}
-        self.sync_roles.start()
-
-    def cog_unload(self):
-        self.sync_roles.cancel()
 
     @commands.group()
     @is_polyphony_user(allow_mods=True)
@@ -249,18 +244,6 @@ class User(commands.Cog):
             embed=discord.Embed(title=f"Pong ({timedelta(seconds=self.bot.latency)})")
         )
 
-    @tasks.loop(seconds=5.0)
-    async def sync_roles(self):
-        for key, pair in self.role_sync_users.items():
-            user = pair["user"]
-            member = pair["member"]
-            user_roles = user.roles[1:]
-            member_roles = member.roles[1:]
-
-            await asyncio.gather(
-                member.remove_roles(*member_roles), member.add_roles(*user_roles)
-            )
-
     @commands.command()
     @is_polyphony_user()
     async def rolesync(self, ctx: commands.context, system_member: discord.Member):
@@ -274,7 +257,7 @@ class User(commands.Cog):
             "SELECT * FROM members WHERE discord_account_id == ? AND member_account_id == ?",
             [ctx.author.id, system_member.id],
         )
-        if c.fetchone() and self.role_sync_users.get(system_member.id) is None:
+        if c.fetchone():
             user_roles = [role for role in ctx.author.roles[1:]]
             member_roles = [role for role in system_member.roles[1:]]
             embed = discord.Embed(
@@ -301,11 +284,20 @@ class User(commands.Cog):
                 name=system_member.display_name, icon_url=system_member.avatar_url,
             )
             instructions = await ctx.channel.send(ctx.author.mention, embed=embed)
-            await ctx.author.remove_roles(*ctx.author.roles[1:])
-            await ctx.author.add_roles(*system_member.roles[1:])
-            self.role_sync_users.update(
-                {system_member.id: {"user": ctx.author, "member": system_member}}
+            loading_embed = discord.Embed(
+                title="*Hold on while I update your roles...*",
+                color=discord.Color.orange(),
             )
+            loading = await ctx.channel.send(embed=loading_embed)
+            async with ctx.channel.typing():
+                await asyncio.gather(
+                    ctx.author.remove_roles(*ctx.author.roles[1:]),
+                    ctx.author.add_roles(*system_member.roles[1:]),
+                )
+            loading_embed = discord.Embed(
+                title="Type `done` to sync your roles.", color=discord.Color.green()
+            )
+            await loading.edit(embed=loading_embed)
             try:
                 await self.bot.wait_for(
                     "message",
@@ -313,8 +305,12 @@ class User(commands.Cog):
                     and message.content.lower() == "done",
                     timeout=60,
                 )
+                loading_embed = discord.Embed(
+                    title="*Hold on while I sync and update...*",
+                    color=discord.Color.orange(),
+                )
+                await loading.edit(embed=loading_embed)
                 async with ctx.channel.typing():
-                    del self.role_sync_users[system_member.id]
                     new_roles = ctx.author.roles[1:]
                     await asyncio.gather(
                         system_member.add_roles(*new_roles),
@@ -341,9 +337,14 @@ class User(commands.Cog):
                         icon_url=system_member.avatar_url,
                     )
                     await instructions.edit(content="", embed=embed)
+                    await loading.delete()
             except asyncio.TimeoutError:
-                del self.role_sync_users[system_member.id]
                 member_roles_to_remove = system_member.roles[1:]
+                loading_embed = discord.Embed(
+                    title="*Timed out. Hold on while I restore your roles...*",
+                    color=discord.Color.orange(),
+                )
+                await loading.edit(embed=loading_embed)
                 await asyncio.gather(
                     system_member.add_roles(*member_roles),
                     ctx.author.remove_roles(*member_roles_to_remove),
@@ -369,6 +370,7 @@ class User(commands.Cog):
                     name=system_member.display_name, icon_url=system_member.avatar_url,
                 )
                 await instructions.edit(content="", embed=embed)
+                await loading.delete()
 
     @commands.command()
     @is_polyphony_user()

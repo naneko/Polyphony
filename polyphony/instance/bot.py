@@ -79,9 +79,8 @@ class PolyphonyInstance(discord.Client):
                 )
             )
         else:
-            # TODO: Member user has left the server
             log.warning(
-                f"The main account for {self.user} ({self._pk_member_id}) has left all guilds with Polyphony"
+                f"{self.user} ({self._pk_member_id}): Failed to find main account. Either this instance is not in the guild or the main account has left the guild."
             )
         with conn:
             log.debug(
@@ -114,7 +113,7 @@ class PolyphonyInstance(discord.Client):
                 )
             except AttributeError:
                 log.warning(
-                    f"The main account for {self.user} ({self._pk_member_id}) has left all guilds with Polyphony"
+                    f"{self.user} ({self._pk_member_id}): Failed to get self within guild {guild.name} to update nickname. This instance is probably not in the guild."
                 )
 
         import requests
