@@ -290,10 +290,8 @@ class User(commands.Cog):
             )
             loading = await ctx.channel.send(embed=loading_embed)
             async with ctx.channel.typing():
-                await asyncio.gather(
-                    ctx.author.remove_roles(*ctx.author.roles[1:]),
-                    ctx.author.add_roles(*system_member.roles[1:]),
-                )
+                await ctx.author.remove_roles(*ctx.author.roles[1:])
+                await ctx.author.add_roles(*system_member.roles[1:])
             loading_embed = discord.Embed(
                 title="Type `done` to sync your roles.", color=discord.Color.green()
             )
@@ -312,11 +310,9 @@ class User(commands.Cog):
                 await loading.edit(embed=loading_embed)
                 async with ctx.channel.typing():
                     new_roles = ctx.author.roles[1:]
-                    await asyncio.gather(
-                        system_member.add_roles(*new_roles),
-                        ctx.author.remove_roles(*new_roles),
-                        ctx.author.add_roles(*user_roles),
-                    )
+                    await system_member.add_roles(*new_roles)
+                    await ctx.author.remove_roles(*new_roles)
+                    await ctx.author.add_roles(*user_roles)
                     embed = discord.Embed(
                         title="Role Sync Complete",
                         description=f"Finished syncing roles from {ctx.author.mention} to {system_member.mention}\n\n*{ctx.author.mention}'s original roles have been restored*",
@@ -345,11 +341,10 @@ class User(commands.Cog):
                     color=discord.Color.orange(),
                 )
                 await loading.edit(embed=loading_embed)
-                await asyncio.gather(
-                    system_member.add_roles(*member_roles),
-                    ctx.author.remove_roles(*member_roles_to_remove),
-                    ctx.author.add_roles(*user_roles),
-                )
+                async with ctx.channel.typing():
+                    await system_member.add_roles(*member_roles)
+                    await ctx.author.remove_roles(*member_roles_to_remove)
+                    await ctx.author.add_roles(*user_roles)
                 embed = discord.Embed(
                     title="Role Sync Timed Out",
                     description=f"Restored original roles for {system_member.mention}",
