@@ -111,8 +111,18 @@ class PolyphonyInstance(discord.Client):
             f"{self.user} ({self._pk_member_id}): Pushing nickname, username, and avatar"
         )
         await self.user.edit(username=self.member_name)
+
         for guild in self.guilds:
-            await guild.get_member(self.user.id).edit(nick=self.display_name)
+            try:
+                await guild.get_member(self.user.id).edit(nick=self.display_name)
+                log.debug(
+                    f"{self.user} ({self._pk_member_id}): Updated nickname to {self.display_name} on guild {guild.name}"
+                )
+            except AttributeError:
+                log.warning(
+                    f"{self.user} ({self._pk_member_id}): Failed to update nickname to {self.display_name} on guild {guild.name}"
+                )
+
         import requests
 
         try:
