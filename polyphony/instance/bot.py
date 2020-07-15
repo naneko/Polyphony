@@ -65,19 +65,13 @@ class PolyphonyInstance(discord.Client):
             self.display_name: str = self.__member_name
         self.pk_avatar_url: str = self.__pk_avatar_url
         self.pk_proxy_tags: dict = self.__pk_proxy_tags
-        for guild in self.guilds:
-            try:
+        self_user = self.get_user(self._discord_account_id)
+        if self_user:
+            for guild in self.guilds:
                 await guild.get_member(self.user.id).edit(nick=self.display_name)
                 log.debug(
                     f"{self.user} ({self._pk_member_id}): Updated nickname to {self.display_name} on guild {guild.name}"
                 )
-            except AttributeError:
-                log.warning(
-                    f"{self.user} ({self._pk_member_id}): Failed to update nickname to {self.display_name} on guild {guild.name}"
-                )
-
-        self_user = self.get_user(self._discord_account_id)
-        if self_user:
             await self.change_presence(
                 activity=discord.Activity(
                     name=f"{self_user.name}#{self_user.discriminator}",
@@ -120,7 +114,7 @@ class PolyphonyInstance(discord.Client):
                 )
             except AttributeError:
                 log.warning(
-                    f"{self.user} ({self._pk_member_id}): Failed to update nickname to {self.display_name} on guild {guild.name}"
+                    f"The main account for {self.user} ({self._pk_member_id}) has left all guilds with Polyphony"
                 )
 
         import requests
