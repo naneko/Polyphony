@@ -12,7 +12,7 @@ from discord.ext import commands, tasks
 
 from polyphony.helpers.checks import is_polyphony_user, is_mod
 from polyphony.helpers.database import c
-from polyphony.helpers.helpers import instances
+from polyphony.helpers.helpers import instances, LogMessage
 
 log = logging.getLogger("polyphony." + __name__)
 
@@ -169,25 +169,21 @@ class User(commands.Cog):
 
         :param ctx: Discord Context
         """
-        status = await ctx.send(
-            embed=discord.Embed(
-                title="Syncing",
-                description="This may take a while...",
-                color=discord.Color.purple(),
-            )
-        )
+        logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
+        logger.color = discord.Color.orange()
         for instance in instances:
             if instance._discord_account_id == ctx.author.id:
-                await instance.sync()
-                embed = discord.Embed(color=discord.Color.green())
-                embed.set_author(
-                    name=str(instance.user), icon_url=instance.pk_avatar_url,
-                )
-                embed.set_footer(text="Synced")
-                await ctx.send(embed=embed)
-        await status.edit(
-            embed=discord.Embed(title="Done", color=discord.Color.green())
-        )
+                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+                try:
+                    await instance.sync()
+                    logger.content[
+                        -1
+                    ] = f":white_check_mark: Synced {instance.user.mention}"
+                except TypeError:
+                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+        logger.title = ":white_check_mark: Sync Complete"
+        logger.color = discord.Color.green()
+        await logger.update()
 
     @commands.command()
     @is_polyphony_user()
@@ -210,16 +206,13 @@ class User(commands.Cog):
                 name="No members where found", value="Ask a mod to add some!"
             )
 
-        inline = 1
         for member in member_list:
             member_user = ctx.guild.get_member_named(f"p.{member['member_name']}")
-            owner_user = ctx.guild.get_member(member["discord_account_id"])
             embed.add_field(
                 name=dict(member).get("display_name", member["member_name"]),
                 value=f"""**User:** {member_user.mention}\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Prefix:** `{json.loads(member['pk_proxy_tags'])['prefix']}`\n**Suffix:** `{json.loads(member['pk_proxy_tags'])['suffix']}`\n**Enabled:** `{"Yes" if member['member_enabled'] else "No"}`""",
-                inline=inline > 0,
+                inline=True,
             )
-            inline = (inline + 1) % 3
 
         await ctx.send(embed=embed)
 

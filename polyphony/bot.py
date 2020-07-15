@@ -96,7 +96,7 @@ async def reload(ctx: commands.context):
             )
             log.info("Reloading complete.")
         else:
-            ctx.send(
+            await ctx.send(
                 "Hot loading is not tested, and hence not enabled, for Polyphony outside of DEBUG mode."
             )
 

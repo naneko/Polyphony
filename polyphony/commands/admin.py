@@ -85,16 +85,17 @@ class Admin(commands.Cog):
         if member_list is None:
             embed.add_field(name="No members where found")
 
-        inline = 1
         for member in member_list:
+            if len(embed.fields) >= 9:
+                await ctx.send(embed=embed)
+                embed = discord.Embed()
             member_user = ctx.guild.get_member_named(f"p.{member['member_name']}")
             owner_user = ctx.guild.get_member(member["discord_account_id"])
             embed.add_field(
                 name=dict(member).get("display_name", member["member_name"]),
                 value=f"""**User:** {member_user.mention} (`{member_user.id}`)\n**Account Owner:** {owner_user.mention if hasattr(owner_user, 'mention') else "*Unable to get User*"} (`{member["discord_account_id"]}`)\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Enabled:** `{bool(member['member_enabled'])}`""",
-                inline=inline > 0,
+                inline=True,
             )
-            inline = (inline + 1) % 3
 
         await ctx.send(embed=embed)
 
@@ -194,6 +195,34 @@ class Admin(commands.Cog):
             icon_url=member["avatar_url"],
         )
         await ctx.send(embed=embed)
+
+    @commands.command()
+    @is_mod()
+    async def syncall(self, ctx: commands.context):
+        log.info("Syncing all...")
+        logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
+        logger.color = discord.Color.orange()
+
+        for instance in instances:
+            if len(logger.content) > 30:
+                logger.title = ":white_check_mark: Batch Complete"
+                logger.color = discord.Color.green()
+                await logger.update()
+                logger = LogMessage(
+                    ctx, title=":hourglass: Syncing Next Batch of Members..."
+                )
+                logger.color = discord.Color.orange()
+            await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+            if await instance.sync() is True:
+                logger.content[
+                    -1
+                ] = f":white_check_mark: Synced {instance.user.mention}"
+            else:
+                logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+        logger.title = ":white_check_mark: Sync Complete"
+        logger.color = discord.Color.green()
+        await logger.update()
+        log.info("Sync all complete")
 
     @commands.command()
     @is_mod()

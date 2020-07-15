@@ -28,9 +28,7 @@ class LogMessage:
         log.debug("LogMessage Instance Created.")
 
     async def send(self, message):
-        embed = discord.Embed(
-            title=self.title, description=message, color=self.color
-        )
+        embed = discord.Embed(title=self.title, description=message, color=self.color)
         if self.message is None:
             self.message = await self.ctx.send(embed=embed)
         else:

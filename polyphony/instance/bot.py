@@ -65,9 +65,9 @@ class PolyphonyInstance(discord.Client):
             self.display_name: str = self.__member_name
         self.pk_avatar_url: str = self.__pk_avatar_url
         self.pk_proxy_tags: dict = self.__pk_proxy_tags
-        await self.user.edit(username=self._member_name)
         for guild in self.guilds:
             await guild.get_member(self.user.id).edit(nick=self._display_name)
+
         self_user = self.get_user(self._discord_account_id)
         if self_user:
             await self.change_presence(
@@ -118,18 +118,24 @@ class PolyphonyInstance(discord.Client):
                 )
                 await ctx.channel.send(embed=embed)
 
-    async def sync(self, ctx=None):
+    async def sync(self, ctx=None) -> bool:
         """
         Sync with PluralKit
+
+        :return (boolean) was successful
         """
         log.info(f"{self.user} ({self._pk_member_id}) is syncing")
         member = await pk_get_member(self._pk_member_id)
+        if member is None:
+            log.warning(f"Failed to sync{self.user} ({self._pk_member_id})")
+            return False
         self.member_name = member["name"]
         self.display_name = member["display_name"]
         self.pk_avatar_url = member["avatar_url"]
         self.pk_proxy_tags = member["proxy_tags"][0]
         await self.update(ctx)
         log.info(f"{self.user} ({self._pk_member_id}): Sync complete")
+        return True
 
     @property
     def member_name(self) -> str:
@@ -145,7 +151,10 @@ class PolyphonyInstance(discord.Client):
 
     @property
     def pk_proxy_tags(self) -> dict:
-        return self._pk_proxy_tags
+        if hasattr(self, "_pk_proxy_tags"):
+            return self._pk_proxy_tags
+        else:
+            return {"prefix": "no_prefix", "suffix": "no_suffix"}
 
     @member_name.setter
     def member_name(self, value: str):
