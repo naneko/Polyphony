@@ -130,7 +130,10 @@ class PolyphonyInstance(discord.Client):
             log.warning(f"Failed to sync{self.user} ({self._pk_member_id})")
             return False
         self.member_name = member["name"]
-        self.display_name = member["display_name"]
+        if member["display_name"] is not None:
+            self.display_name: str = self.__display_name
+        else:
+            self.display_name: str = self.__member_name
         self.pk_avatar_url = member["avatar_url"]
         self.pk_proxy_tags = member["proxy_tags"][0]
         await self.update(ctx)
