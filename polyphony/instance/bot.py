@@ -66,7 +66,15 @@ class PolyphonyInstance(discord.Client):
         self.pk_avatar_url: str = self.__pk_avatar_url
         self.pk_proxy_tags: dict = self.__pk_proxy_tags
         for guild in self.guilds:
-            await guild.get_member(self.user.id).edit(nick=self._display_name)
+            try:
+                await guild.get_member(self.user.id).edit(nick=self.display_name)
+                log.debug(
+                    f"{self.user} ({self._pk_member_id}): Updated nickname to {self.display_name} on guild {guild.name}"
+                )
+            except AttributeError:
+                log.warning(
+                    f"{self.user} ({self._pk_member_id}): Failed to update nickname to {self.display_name} on guild {guild.name}"
+                )
 
         self_user = self.get_user(self._discord_account_id)
         if self_user:
@@ -131,7 +139,7 @@ class PolyphonyInstance(discord.Client):
             return False
         self.member_name = member["name"]
         if member["display_name"] is not None:
-            self.display_name: str = self.__display_name
+            self.display_name: str = member["display_name"]
         else:
             self.display_name: str = self.__member_name
         self.pk_avatar_url = member["avatar_url"]
@@ -285,7 +293,7 @@ class PolyphonyInstance(discord.Client):
             )
 
     async def on_guild_join(self, guild: discord.Guild):
-        await guild.get_member(self.user.id).edit(nick=self._display_name)
+        await guild.get_member(self.user.id).edit(nick=self.display_name)
 
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member):
         if reaction.message.author == self.user and user == self.get_user(
