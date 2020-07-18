@@ -45,52 +45,65 @@ class PolyphonyInstance(discord.Client):
         :param options:
         """
         super().__init__(**options)
+        self.pk_member_id: str = pk_member_id
+        self.main_user_account_id: int = discord_account_id
         self._token: str = token
-        self._pk_member_id: str = pk_member_id
-        self._discord_account_id: int = discord_account_id
+
+        # Temporary for Initialization. Will be sent to API in on_ready().
         self.__member_name: str = member_name
         self.__display_name: str = display_name
         self.__pk_avatar_url: str = pk_avatar_url
-        self.__pk_proxy_tags: dict = json.loads(pk_proxy_tags)
+        self.__pk_proxy_tags = json.loads(pk_proxy_tags)
+
+        # Prevent message processing until ready
+        self.initialized = False
 
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
         log.info(
-            f"Instance started as {self.user} ({self._pk_member_id}). Initializing..."
+            f"Instance started as {self.user} ({self.pk_member_id}). Initializing..."
         )
+
+        # Update Member Name
         self.member_name: str = self.__member_name
         if self.__display_name:
             self.display_name: str = self.__display_name
         else:
             self.display_name: str = self.__member_name
+
+        # Update Username
+        await self.user.edit(username=self.member_name)
+
+        # Update Avatar
         self.pk_avatar_url: str = self.__pk_avatar_url
-        self.pk_proxy_tags: dict = self.__pk_proxy_tags
-        self_user = self.get_user(self._discord_account_id)
-        if self_user:
-            for guild in self.guilds:
-                await guild.get_member(self.user.id).edit(nick=self.display_name)
-                log.debug(
-                    f"{self.user} ({self._pk_member_id}): Updated nickname to {self.display_name} on guild {guild.name}"
-                )
-            await self.change_presence(
-                activity=discord.Activity(
-                    name=f"{self_user.name}#{self_user.discriminator}",
-                    type=discord.ActivityType.listening,
-                )
+
+        # Update Proxy Tags
+        self.pk_proxy_tags = self.__pk_proxy_tags
+
+        # Update Nickname in Guilds
+        await self.push_nickname_updates()
+
+        # Update Presence
+        await self.change_presence(
+            activity=discord.Activity(
+                name=f"{self.get_user(self.main_user_account_id)}#{self.user.discriminator}",
+                type=discord.ActivityType.listening,
             )
-        else:
-            log.warning(
-                f"{self.user} ({self._pk_member_id}): Failed to find main account. Either this instance is not in the guild or the main account has left the guild."
-            )
+        )
+
+        # Update Self ID in Database
         with conn:
             log.debug(
-                f"{self.user} ({self._pk_member_id}): Updating Self Account ID: {self.user.id}"
+                f"{self.user} ({self.pk_member_id}): Updating Self Account ID: {self.user.id}"
             )
             c.execute(
                 "UPDATE members SET member_account_id = ? WHERE pk_member_id = ?",
-                [self.user.id, self._pk_member_id],
+                [self.user.id, self.pk_member_id],
             )
-        log.info(f"{self.user} ({self._pk_member_id}): Initialization complete")
+
+        log.info(f"{self.user} ({self.pk_member_id}): Initialization complete")
+
+        self.initialized = True
 
     async def update(self, ctx=None):
         """
@@ -101,21 +114,16 @@ class PolyphonyInstance(discord.Client):
             Update nickname from display_name
         """
         log.debug(
-            f"{self.user} ({self._pk_member_id}): Pushing nickname, username, and avatar"
+            f"{self.user} ({self.pk_member_id}): Pushing nickname, username, and avatar"
         )
+
+        # Update Username
         await self.user.edit(username=self.member_name)
 
-        for guild in self.guilds:
-            try:
-                await guild.get_member(self.user.id).edit(nick=self.display_name)
-                log.debug(
-                    f"{self.user} ({self._pk_member_id}): Updated nickname to {self.display_name} on guild {guild.name}"
-                )
-            except AttributeError:
-                log.warning(
-                    f"{self.user} ({self._pk_member_id}): Failed to get self within guild {guild.name} to update nickname. This instance is probably not in the guild."
-                )
+        # Update Nickname
+        await self.push_nickname_updates()
 
+        # Update Avatar
         import requests
 
         try:
@@ -129,26 +137,43 @@ class PolyphonyInstance(discord.Client):
                 )
                 await ctx.channel.send(embed=embed)
 
+    async def push_nickname_updates(self):
+        log.debug(f"{self.user} ({self.pk_member_id}): Updating nickname in guilds")
+        for guild in self.guilds:
+            await guild.get_member(self.user.id).edit(nick=self.display_name)
+            log.debug(
+                f"{self.user} ({self.pk_member_id}): Updated nickname to {self.display_name} on guild {guild.name}"
+            )
+
     async def sync(self, ctx=None) -> bool:
         """
         Sync with PluralKit
 
         :return (boolean) was successful
         """
-        log.info(f"{self.user} ({self._pk_member_id}) is syncing")
-        member = await pk_get_member(self._pk_member_id)
+        log.info(f"{self.user} ({self.pk_member_id}) is syncing")
+
+        # Get PluralKit Member
+        member = await pk_get_member(self.pk_member_id)
+
+        # Detect Failure
         if member is None:
-            log.warning(f"Failed to sync{self.user} ({self._pk_member_id})")
+            log.warning(
+                f"Failed to sync {self.user} (`{self.pk_member_id}`) because the member ID was not found on PluralKit's Servers"
+            )
             return False
-        self.member_name = member["name"]
-        if member["display_name"] is not None:
-            self.display_name: str = member["display_name"]
-        else:
-            self.display_name: str = self.__member_name
-        self.pk_avatar_url = member["avatar_url"]
-        self.pk_proxy_tags = member["proxy_tags"][0]
+
+        # Update member name
+        self.member_name = member.get("name") or self.member_name
+
+        # Update display name (remove p. in member_name if using member_name)
+        self.display_name: str = member.get("display_name") or self.member_name[2:]
+
+        self.pk_avatar_url = member.get("avatar_url")
+        self.pk_proxy_tags = member.get("proxy_tags")
+
         await self.update(ctx)
-        log.info(f"{self.user} ({self._pk_member_id}): Sync complete")
+        log.info(f"{self.user} ({self.pk_member_id}): Sync complete")
         return True
 
     @property
@@ -172,11 +197,11 @@ class PolyphonyInstance(discord.Client):
 
     @member_name.setter
     def member_name(self, value: str):
-        log.debug(f"{self.user} ({self._pk_member_id}): Username updating to p.{value}")
+        log.debug(f"{self.user} ({self.pk_member_id}): Username updating to p.{value}")
         self._member_name = f"p.{value}"
         self.user.name = f"p.{value}"
         with conn:
-            log.debug(f"{self.user} ({self._pk_member_id}): Updating Member Name")
+            log.debug(f"{self.user} ({self.pk_member_id}): Updating Member Name")
             c.execute(
                 "UPDATE members SET member_name = ? WHERE token = ?",
                 [value, self._token],
@@ -189,7 +214,7 @@ class PolyphonyInstance(discord.Client):
         """
         self._display_name = value
         with conn:
-            log.debug(f"{self.user} ({self._pk_member_id}): Updating Display Name")
+            log.debug(f"{self.user} ({self.pk_member_id}): Updating Display Name")
             c.execute(
                 "UPDATE members SET display_name = ? WHERE token = ?",
                 [value, self._token],
@@ -204,7 +229,7 @@ class PolyphonyInstance(discord.Client):
         self._pk_avatar_url = value
         with conn:
             log.debug(
-                f"{self.user} ({self._pk_member_id}): Updating avatar URL to {value}"
+                f"{self.user} ({self.pk_member_id}): Updating avatar URL to {value}"
             )
             c.execute(
                 "UPDATE members SET pk_avatar_url = ? WHERE token = ?",
@@ -216,7 +241,7 @@ class PolyphonyInstance(discord.Client):
         self._pk_proxy_tags = value
         with conn:
             log.debug(
-                f"{self.user} ({self._pk_member_id}): Updating proxy tags to {value}"
+                f"{self.user} ({self.pk_member_id}): Updating proxy tags to {value}"
             )
             c.execute(
                 "UPDATE members SET pk_proxy_tags = ? WHERE token = ?",
@@ -227,11 +252,11 @@ class PolyphonyInstance(discord.Client):
         return self._token
 
     async def on_member_update(self, before: discord.Member, after: discord.Member):
-        if self._discord_account_id == after.id and before.status != after.status:
+        if self.main_user_account_id == after.id and before.status != after.status:
             log.debug(
-                f"{self.user} ({self._pk_member_id}): Updating presence to {after.status}"
+                f"{self.user} ({self.pk_member_id}): Updating presence to {after.status}"
             )
-            self_user = self.get_user(self._discord_account_id)
+            self_user = self.get_user(self.main_user_account_id)
             await self.change_presence(
                 status=after.status,
                 activity=discord.Activity(
@@ -241,46 +266,70 @@ class PolyphonyInstance(discord.Client):
             )
 
     async def on_message(self, message: discord.Message):
+        if self.initialized is False:
+            return
+
         start = time.time()
+
+        prefix_used = None
+        suffix_used = None
+
+        # Check prefix/suffix and get value
+        for tag in self.pk_proxy_tags:
+            if message.content.startswith(
+                tag.get("prefix") or ""
+            ) and message.content.endswith(tag.get("suffix") or ""):
+                prefix_used = tag.get("prefix") or ""
+                suffix_used = tag.get("suffix") or ""
+                break
+
+        # Check message
         if (
-            message.content.startswith(self.pk_proxy_tags.get("prefix") or "")
-            and message.content.endswith(self.pk_proxy_tags.get("suffix") or "")
+            prefix_used is not None
+            and suffix_used is not None
             and message.author is not self.user
-            and message.author.id == self._discord_account_id
+            and message.author.id == self.main_user_account_id
         ):
             log.debug(
-                f'{self.user} ({self._pk_member_id}): Processing new message => "{message.content}" (attachments: {len(message.attachments)})'
+                f'{self.user} ({self.pk_member_id}): Processing new message => "{message.content}" (attachments: {len(message.attachments)})'
             )
+
+            # Remove prefix/suffix
             msg = message.content[
-                len(self.pk_proxy_tags.get("prefix") or "")
-                or None : -len(self.pk_proxy_tags.get("suffix") or "")
-                or None
+                len(prefix_used or "") or None : -len(suffix_used or "") or None
             ]
 
-            # Do both at the same time to be as fast as possible
+            # Delete and send at same time to be as fast as possible
             from polyphony.bot import bot
 
             await asyncio.gather(
+                # Trigger typing if uploading attachment
                 message.channel.trigger_typing()
                 if len(message.attachments) > 0
                 else asyncio.sleep(0),
+                # Delete Message. Without context, it's easier to call the low-level method in discord.http.
                 bot.http.delete_message(message.channel.id, message.id),
+                # Send new message
                 message.channel.send(
                     msg, files=[await file.to_file() for file in message.attachments],
                 ),
             )
+
             end = time.time()
             log.debug(
-                f"{self.user} ({self._pk_member_id}): Benchmark: {timedelta(seconds=end - start)} | Protocol Roundtrip: {timedelta(seconds=self.latency)}"
+                f"{self.user} ({self.pk_member_id}): Benchmark: {timedelta(seconds=end - start)} | Protocol Roundtrip: {timedelta(seconds=self.latency)}"
             )
+
+        # Check for ping
         elif (
             self.user in message.mentions
-            and message.author.id != self._discord_account_id
+            and message.author.id != self.main_user_account_id
             and message.author.id != self.user.id
             and not message.content.startswith(COMMAND_PREFIX)
         ):
+            # Forward Ping
             log.debug(
-                f"Forwarding ping from {self.user} to {self.get_user(self._discord_account_id)}"
+                f"Forwarding ping from {self.user} to {self.get_user(self.main_user_account_id)}"
             )
             from polyphony.bot import bot
 
@@ -292,16 +341,21 @@ class PolyphonyInstance(discord.Client):
             )
 
             await bot.get_channel(message.channel.id).send(
-                f"{self.get_user(self._discord_account_id).mention}", embed=embed,
+                f"{self.get_user(self.main_user_account_id).mention}", embed=embed,
             )
 
     async def on_guild_join(self, guild: discord.Guild):
+        # Update Nickname on guild join
         await guild.get_member(self.user.id).edit(nick=self.display_name)
 
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member):
+        # Message deletes are handled by main bot to avoid permissions issues
+
+        # Check for correct user
         if reaction.message.author == self.user and user == self.get_user(
-            self._discord_account_id
+            self.main_user_account_id
         ):
+
             # Delete React
             if (
                 emoji.demojize(reaction.emoji) or ""
@@ -311,6 +365,7 @@ class PolyphonyInstance(discord.Client):
                 await bot.http.delete_message(
                     reaction.message.channel.id, reaction.message.id
                 ),
+
             # Edit React
             if (
                 emoji.demojize(reaction.emoji) or ""
@@ -326,48 +381,40 @@ class PolyphonyInstance(discord.Client):
                     f"{user.mention}", embed=embed
                 )
 
-                # Gets the message with the main bot in order to remove the reaction
-                remove_reaction_message = await bot.get_channel(
-                    reaction.message.channel.id
-                ).fetch_message(reaction.message.id)
                 try:
+
+                    # Wait 30 seconds for new message
                     message = await self.wait_for(
                         "message",
                         check=lambda message: message.author
-                        == self.get_user(self._discord_account_id),
+                        == self.get_user(self.main_user_account_id),
                         timeout=30,
                     )
-                    remove_reaction_message = await bot.get_channel(
-                        message.channel.id
-                    ).fetch_message(reaction.message.id)
+
+                    # On new message, do all the things
                     await asyncio.gather(
-                        # Delete with main bot:
+                        # Delete instructions and edit message with main bot (again, low-level is easier without ctx)
                         bot.http.delete_message(
                             instructions.channel.id, instructions.id
                         ),
                         bot.http.delete_message(message.channel.id, message.id),
-                        remove_reaction_message.remove_reaction(
-                            reaction.emoji, self.get_user(self._discord_account_id)
+                        reaction.message.remove_reaction(
+                            reaction.emoji, self.get_user(self.main_user_account_id)
                         ),
+                        # If message isn't "cancel" then edit the message
                         reaction.message.edit(content=message.content)
                         if message.content.lower() != "cancel"
                         else asyncio.sleep(0),
-                        # Delete with instance bot user:
-                        # instructions.delete(),
-                        # message.delete(),
-                        # reaction.remove(user),
                     )
+
+                # On timeout, delete instructions and reaction
                 except asyncio.TimeoutError:
-                    # Delete with main bot:
+                    # Delete instructions with main bot
                     await asyncio.gather(
                         bot.http.delete_message(
                             instructions.channel.id, instructions.id
                         ),
-                        remove_reaction_message.remove_reaction(
-                            reaction.emoji, self.get_user(self._discord_account_id)
+                        reaction.message.remove_reaction(
+                            reaction.emoji, self.get_user(self.main_user_account_id)
                         ),
                     )
-                    # Delete with instance bot user:
-                    # await asyncio.gather(
-                    #     instructions.delete(), reaction.remove(user),
-                    # )
