@@ -43,7 +43,7 @@ class LogMessage:
         await self.send("\n".join(self.content))
 
 
-def create_member_instance(member: sqlite3.Row):
+def create_member_instance(member: sqlite3.Row) -> PolyphonyInstance:
     """
     Create member instance threads from dictionary that is returned from database
     :param member: directory that is returned from database functions
@@ -65,3 +65,4 @@ def create_member_instance(member: sqlite3.Row):
     loop = asyncio.get_event_loop()
     loop.create_task(new_instance.start(member["token"]))
     instances.append(new_instance)
+    return new_instance

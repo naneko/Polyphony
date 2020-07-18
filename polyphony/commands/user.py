@@ -106,7 +106,7 @@ class User(commands.Cog):
             value="**This enables role sync mode.** This will temporarily remove all roles from the main user and "
             "replace them with the system member's roles. Any roles you assign to yourself (the main user) will be "
             "synced with the system member. Type `done` and your main user's original roles will be restored.\n"
-            "*This command will auto timeout after one minute. If it times out, the changes will not be saved.*",
+            "*This command will auto timeout after 5 minutes. If it times out, the changes will not be saved.*",
             inline=False,
         )
         embed.add_field(
@@ -140,12 +140,7 @@ class User(commands.Cog):
         await ctx.message.delete()
         c.execute("SELECT * FROM tokens WHERE used = 0")
         slots = c.fetchall()
-        if len(slots) == 0:
-            embed = discord.Embed(
-                title=f"Sorry, there are currently no slots available",
-                description="Contact a moderator",
-            )
-        elif 2 > len(slots) > 1:
+        if 2 > len(slots) >= 1:
             embed = discord.Embed(
                 title=f"There is 1 slot available.", color=discord.Color.green()
             )
@@ -153,6 +148,11 @@ class User(commands.Cog):
             embed = discord.Embed(
                 title=f"There are {len(slots)} slots available",
                 color=discord.Color.green(),
+            )
+        else:
+            embed = discord.Embed(
+                title=f"Sorry, there are currently no slots available",
+                description="Contact a moderator",
             )
         await ctx.channel.send(embed=embed)
 
@@ -167,7 +167,7 @@ class User(commands.Cog):
         logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
         logger.color = discord.Color.orange()
         for instance in instances:
-            if instance._discord_account_id == ctx.author.id:
+            if instance.main_user_account_id == ctx.author.id:
                 await logger.log(f":hourglass: Syncing {instance.user.mention}...")
                 try:
                     await instance.sync()
@@ -203,9 +203,18 @@ class User(commands.Cog):
 
         for member in member_list:
             member_user = ctx.guild.get_member_named(f"p.{member['member_name']}")
+            tags = []
+            for tag in json.loads(member["pk_proxy_tags"]):
+                tags.append(
+                    "`"
+                    + (tag.get("prefix") or "")
+                    + "text"
+                    + (tag.get("suffix") or "")
+                    + "`"
+                )
             embed.add_field(
                 name=dict(member).get("display_name", member["member_name"]),
-                value=f"""**User:** {member_user.mention}\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Prefix:** `{json.loads(member['pk_proxy_tags'])['prefix']}`\n**Suffix:** `{json.loads(member['pk_proxy_tags'])['suffix']}`\n**Enabled:** `{"Yes" if member['member_enabled'] else "No"}`""",
+                value=f"""**User:** {member_user.mention}\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Tags:** {' or '.join(tags)}\n**Enabled:** `{'Yes' if member['member_enabled'] else 'No'}`""",
                 inline=True,
             )
 
@@ -258,8 +267,12 @@ class User(commands.Cog):
             [ctx.author.id, system_member.id],
         )
         if c.fetchone():
+
+            # Get User's Roles
             user_roles = [role for role in ctx.author.roles[1:]]
+            # Get Member's Roles
             member_roles = [role for role in system_member.roles[1:]]
+
             embed = discord.Embed(
                 title="Syncing roles...",
                 description=f"Assign yourself the roles you want for {system_member.mention} and then type `done`",
@@ -278,7 +291,7 @@ class User(commands.Cog):
                 value=embed_member_original_roles or "None",
             )
             embed.set_footer(
-                text="Will timeout in 1 minute. Changes may take a moment to update."
+                text="Will timeout in 5 minutes. Changes may take a moment to update."
             )
             embed.set_author(
                 name=system_member.display_name, icon_url=system_member.avatar_url,
@@ -289,6 +302,8 @@ class User(commands.Cog):
                 color=discord.Color.orange(),
             )
             loading = await ctx.channel.send(embed=loading_embed)
+
+            # Remove user's roles and give member's roles
             async with ctx.channel.typing():
                 await ctx.author.remove_roles(*ctx.author.roles[1:])
                 await ctx.author.add_roles(*system_member.roles[1:])
@@ -296,23 +311,36 @@ class User(commands.Cog):
                 title="Type `done` to sync your roles.", color=discord.Color.green()
             )
             await loading.edit(embed=loading_embed)
+
+            # Wait for "done"
             try:
                 await self.bot.wait_for(
                     "message",
                     check=lambda message: message.author == ctx.author
                     and message.content.lower() == "done",
-                    timeout=60,
+                    timeout=60 * 5,  # 5 mins
                 )
                 loading_embed = discord.Embed(
                     title="*Hold on while I sync and update...*",
                     color=discord.Color.orange(),
                 )
                 await loading.edit(embed=loading_embed)
+
+                # On done, add new roles to member, remove new roles from user, and old roles to user
                 async with ctx.channel.typing():
                     new_roles = ctx.author.roles[1:]
-                    await system_member.add_roles(*new_roles)
-                    await ctx.author.remove_roles(*new_roles)
-                    await ctx.author.add_roles(*user_roles)
+
+                    # Remove all roles from member and main user
+                    await asyncio.gather(
+                        system_member.remove_roles(*member_roles),
+                        ctx.author.remove_roles(*new_roles),
+                    )
+
+                    # Add new roles to member and restore user roles
+                    await asyncio.gather(
+                        system_member.add_roles(*new_roles),
+                        ctx.author.add_roles(*user_roles),
+                    )
                     embed = discord.Embed(
                         title="Role Sync Complete",
                         description=f"Finished syncing roles from {ctx.author.mention} to {system_member.mention}\n\n*{ctx.author.mention}'s original roles have been restored*",
@@ -359,7 +387,7 @@ class User(commands.Cog):
                     value=" ".join([role.mention for role in member_roles_to_remove]),
                 )
                 embed.set_footer(
-                    text='Role sync times out after 1 minute. Type "done" next time to save changes.'
+                    text='Role sync times out after 5 minutes. Type "done" next time to save changes.'
                 )
                 embed.set_author(
                     name=system_member.display_name, icon_url=system_member.avatar_url,
