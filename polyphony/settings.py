@@ -25,11 +25,16 @@ DEBUG = os.getenv("DEBUG", False)
 TOKEN = os.getenv("TOKEN")
 DATABASE_URI = os.getenv("DATABASE_URI")
 MODERATOR_ROLES = os.getenv("MODERATOR_ROLES", ["Moderator", "Moderators"])
+ALWAYS_SYNC_ROLES = os.getenv("ALWAYS_SYNC_ROLES", [])
+NEVER_SYNC_ROLES = os.getenv("NEVER_SYNC_ROLES", [])
 DEFAULT_INSTANCE_PERMS = os.getenv("DEFAULT_INSTANCE_PERMS", 0)
 SUSPEND_ON_LEAVE = os.getenv("SUSPEND_ON_LEAVE", True)  # TODO: Implement
 SUSPEND_INACTIVE_DAYS = os.getenv("SUSPEND_INACTIVE_DAYS", 14)
 LOGGING_CHANNEL_ID = os.getenv("LOGGING_CHANNEL_ID")
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ";;")
+# 0 to prevent accidental "None" value from API:
+DELETE_LOGS_CHANNEL_ID = os.getenv("DELETE_LOGS_CHANNEL_ID", 0)
+DELETE_LOGS_USER_ID = os.getenv("DELETE_LOGS_USER_ID", 0)
 
 # Debug Mode Setup
 if DEBUG is True:

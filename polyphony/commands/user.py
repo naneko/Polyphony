@@ -12,7 +12,8 @@ from discord.ext import commands
 
 from polyphony.helpers.checks import is_polyphony_user, is_mod
 from polyphony.helpers.database import c
-from polyphony.helpers.helpers import instances, LogMessage
+from polyphony.helpers.instances import instances
+from polyphony.helpers.log_message import LogMessage
 
 log = logging.getLogger("polyphony." + __name__)
 
