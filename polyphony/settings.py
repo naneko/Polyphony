@@ -21,7 +21,7 @@ except ImportError:
     logging.debug("python-dotenv not loaded. Hope you set your environment variables.")
 
 # Get config from environment variables (returns none if not found)
-DEBUG = os.getenv("DEBUG", False)
+DEBUG = bool(os.getenv("DEBUG", False))
 TOKEN = os.getenv("TOKEN")
 DATABASE_URI = os.getenv("DATABASE_URI")
 MODERATOR_ROLES = os.getenv("MODERATOR_ROLES", ["Moderator", "Moderators"])
