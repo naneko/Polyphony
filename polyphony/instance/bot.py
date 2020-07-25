@@ -12,6 +12,7 @@ import discord.ext
 import emoji
 
 from polyphony.helpers.database import conn, c
+from polyphony.helpers.message_cache import new_proxied_message
 from polyphony.helpers.pluralkit import pk_get_member
 from polyphony.settings import COMMAND_PREFIX
 
@@ -260,8 +261,7 @@ class PolyphonyInstance(discord.Client):
             await self.change_presence(
                 status=after.status,
                 activity=discord.Activity(
-                    name=f"{self_user.name}#{self_user.discriminator}",
-                    type=discord.ActivityType.listening,
+                    name={self_user.name}, type=discord.ActivityType.listening,
                 ),
             )
 
@@ -314,6 +314,8 @@ class PolyphonyInstance(discord.Client):
                     msg, files=[await file.to_file() for file in message.attachments],
                 ),
             )
+
+            new_proxied_message(message)
 
             end = time.time()
             log.debug(

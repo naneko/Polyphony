@@ -2,6 +2,7 @@
 Admin commands to configure polyphony
 """
 import asyncio
+import json
 import logging
 import sqlite3
 from typing import List
@@ -10,7 +11,6 @@ import discord
 from discord.ext import commands
 from disputils import BotConfirmation
 
-from polyphony.bot import create_member_instance
 from polyphony.helpers.checks import is_mod, check_token
 from polyphony.helpers.database import (
     insert_member,
@@ -25,7 +25,8 @@ from polyphony.helpers.database import (
     get_member_by_discord_id,
     conn,
 )
-from polyphony.helpers.helpers import LogMessage, instances
+from polyphony.helpers.instances import instances, create_member_instance
+from polyphony.helpers.log_message import LogMessage
 from polyphony.helpers.pluralkit import pk_get_member
 from polyphony.settings import DEFAULT_INSTANCE_PERMS, MODERATOR_ROLES
 
@@ -99,9 +100,18 @@ class Admin(commands.Cog):
                 embed = discord.Embed()
             member_user = ctx.guild.get_member(member["member_account_id"])
             owner_user = ctx.guild.get_member(member["discord_account_id"])
+            tags = []
+            for tag in json.loads(member["pk_proxy_tags"]):
+                tags.append(
+                    "`"
+                    + (tag.get("prefix") or "")
+                    + "text"
+                    + (tag.get("suffix") or "")
+                    + "`"
+                )
             embed.add_field(
                 name=dict(member).get("display_name", member["member_name"]),
-                value=f"""**User:** {member_user.mention} (`{member_user.id}`)\n**Account Owner:** {owner_user.mention if hasattr(owner_user, 'mention') else "*Unable to get User*"} (`{member["discord_account_id"]}`)\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Enabled:** `{bool(member['member_enabled'])}`""",
+                value=f"""**User:** {member_user.mention} (`{member_user.id}`)\n**Account Owner:** {owner_user.mention if hasattr(owner_user, 'mention') else "*Unable to get User*"} (`{member["discord_account_id"]}`)\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Tag(s):** {' or '.join(tags)}\n**Enabled:** `{bool(member['member_enabled'])}`""",
                 inline=True,
             )
 
