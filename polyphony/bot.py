@@ -6,13 +6,10 @@ from discord.ext import commands
 from .helpers.checks import is_mod
 from .helpers.database import init_db, get_enabled_members
 from .helpers.instances import create_member_instance
-from .helpers.message_cache import recently_proxied_messages
 from .settings import (
     TOKEN,
     DEBUG,
     COMMAND_PREFIX,
-    DELETE_LOGS_CHANNEL_ID,
-    DELETE_LOGS_USER_ID,
 )
 
 log = logging.getLogger(__name__)
@@ -106,27 +103,6 @@ async def reload(ctx: commands.context):
             await ctx.send(
                 "Hot loading is not tested, and hence not enabled, for Polyphony outside of DEBUG mode."
             )
-
-
-@bot.event
-async def on_message(msg: discord.Message):
-    if (
-        not msg.channel.id == DELETE_LOGS_CHANNEL_ID
-        or not msg.author.id == DELETE_LOGS_USER_ID
-    ):
-        return
-
-    log.debug(f"New message {msg.id} that might be a delete log found.")
-
-    try:
-        embed_text = msg.embeds[0].description
-    except IndexError:
-        return
-
-    for oldmsg in recently_proxied_messages:
-        if str(oldmsg.id) in embed_text:
-            log.debug(f"Deleting delete log message {msg.id} (was about {oldmsg.id})")
-            await msg.delete()
 
 
 bot.run(TOKEN)
