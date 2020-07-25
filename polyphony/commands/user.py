@@ -50,7 +50,8 @@ class User(commands.Cog):
             )
             embed.add_field(
                 name=":inbox_tray: __Syncing from PluralKit__",
-                value="`;;sync` will sync changes for all your members",
+                value="`;;sync` will sync changes for all your members\n"
+                "`;;sync member (member mention)` will sync changes for one specific member",
                 inline=False,
             )
             embed.add_field(
@@ -87,8 +88,9 @@ class User(commands.Cog):
         )
         embed.add_field(
             name=":inbox_tray: `;;sync`",
-            value="**Syncs information from PluralKit for all members**"
-            "\n*Tip: Setting a display name in PluralKit will set a nickname that is different from the bot username*",
+            value="**Syncs information from PluralKit for all members**\n"
+            "`;;sync member (member mention)` will sync changes for one specific member\n"
+            "*Tip: Setting a display name in PluralKit will set a nickname that is different from the bot username*",
             inline=False,
         )
         embed.add_field(
@@ -157,7 +159,7 @@ class User(commands.Cog):
             )
         await ctx.channel.send(embed=embed)
 
-    @commands.command()
+    @commands.group()
     @is_polyphony_user()
     async def sync(self, ctx: commands.context):
         """
@@ -165,10 +167,40 @@ class User(commands.Cog):
 
         :param ctx: Discord Context
         """
+        if ctx.invoked_subcommand is not None:
+            return
         logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
         logger.color = discord.Color.orange()
         for instance in instances:
             if instance.main_user_account_id == ctx.author.id:
+                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+                try:
+                    await instance.sync()
+                    logger.content[
+                        -1
+                    ] = f":white_check_mark: Synced {instance.user.mention}"
+                except TypeError:
+                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+        logger.title = ":white_check_mark: Sync Complete"
+        logger.color = discord.Color.green()
+        await logger.update()
+
+    @sync.command()
+    @is_polyphony_user()
+    async def member(self, ctx: commands.context, system_member: discord.User):
+        """
+        Sync system member with PluralKit
+
+        :param system_member: User to sync
+        :param ctx: Discord Context
+        """
+        logger = LogMessage(ctx, title=f":hourglass: Syncing {system_member}...")
+        logger.color = discord.Color.orange()
+        for instance in instances:
+            if (
+                instance.user.id == system_member.id
+                and instance.main_user_account_id == ctx.author.id
+            ):
                 await logger.log(f":hourglass: Syncing {instance.user.mention}...")
                 try:
                     await instance.sync()
