@@ -12,9 +12,10 @@ import discord.ext
 import emoji
 
 from polyphony.helpers.database import conn, c
+from polyphony.helpers.log_to_channel import send_to_log_channel
 from polyphony.helpers.message_cache import new_proxied_message
 from polyphony.helpers.pluralkit import pk_get_member
-from polyphony.settings import COMMAND_PREFIX
+from polyphony.settings import COMMAND_PREFIX, DEFAULT_INSTANCE_PERMS, GUILD_ID
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +65,14 @@ class PolyphonyInstance(discord.Client):
         log.info(
             f"Instance started as {self.user} ({self.pk_member_id}). Initializing..."
         )
+
+        state = await self.check_for_invalid_states()
+        if state == 1:
+            log.warning(
+                f"Failed to start {self.user} (`{self.pk_member_id}`) because main user left. Instance has been suspended."
+            )
+            await self.close()
+            return
 
         # Update Member Name
         self.member_name: str = self.__member_name
@@ -146,9 +155,13 @@ class PolyphonyInstance(discord.Client):
                 f"{self.user} ({self.pk_member_id}): Updated nickname to {self.display_name} on guild {guild.name}"
             )
 
-    async def sync(self, ctx=None) -> bool:
+    async def sync(self, ctx=None) -> int:
         """
         Sync with PluralKit
+
+        Return 0, success
+        Return 1, not found on PluralKit (TODO: Change this to an invalid state that auto-stops the instance)
+        Return 2, main user left
 
         :return (boolean) was successful
         """
@@ -162,7 +175,14 @@ class PolyphonyInstance(discord.Client):
             log.warning(
                 f"Failed to sync {self.user} (`{self.pk_member_id}`) because the member ID was not found on PluralKit's Servers"
             )
-            return False
+            return 1
+
+        state = await self.check_for_invalid_states()
+        if state == 1:
+            log.warning(
+                f"Failed to sync {self.user} (`{self.pk_member_id}`) because main user left. Instance has been suspended."
+            )
+            return 2
 
         # Update member name
         self.member_name = member.get("name") or self.member_name
@@ -175,7 +195,70 @@ class PolyphonyInstance(discord.Client):
 
         await self.update(ctx)
         log.info(f"{self.user} ({self.pk_member_id}): Sync complete")
-        return True
+        return 0
+
+    async def check_for_invalid_states(self) -> int:
+        log.debug(f"{self.user} ({self.pk_member_id}): Checking for invalid states...")
+        if await self.check_if_main_account_left():
+            log.warning(
+                f"{self.user} ({self.pk_member_id}): Main user left. Suspending self."
+            )
+            embed = discord.Embed(
+                title="Main account left",
+                description=f"Main account left for {self.user.mention}\n\n*Instance has been suspended.*",
+                color=discord.Color.red(),
+            )
+            embed.set_footer(text=f"Main Account ID: {self.main_user_account_id}")
+            await send_to_log_channel(embed=embed)
+            from polyphony.helpers.instances import instances
+
+            for i, instance in enumerate(instances):
+                if instance.user.id == self.user.id:
+                    await instance.close()
+                    with conn:
+                        c.execute(
+                            "UPDATE members SET member_enabled = 0 WHERE token = ?",
+                            [instance.get_token()],
+                        )
+                    del instances[i]
+            return 1
+
+        elif await self.check_if_not_in_guild():
+            log.debug(f"{self.user} ({self.pk_member_id}) is not in the guild")
+            from polyphony.bot import bot
+
+            embed = discord.Embed(
+                title="Member started but is not in server",
+                description=f"[Invite to Server]({discord.utils.oauth_url(self.user.id, permissions=discord.Permissions(DEFAULT_INSTANCE_PERMS), guild=bot.get_guild(GUILD_ID))})",
+                color=discord.Color.red(),
+            )
+            await send_to_log_channel(embed=embed)
+            return 2
+        return 0
+
+    async def check_if_main_account_left(self) -> bool:
+        log.debug(f"{self.user} ({self.pk_member_id}): Checking for account left...")
+        from polyphony.bot import bot
+
+        if (
+            bot.get_user(self.main_user_account_id)
+            not in bot.get_guild(GUILD_ID).members
+        ):
+            log.debug(f"{self.user} ({self.pk_member_id}): Main account left")
+            return True
+        return False
+
+    async def check_if_not_in_guild(self) -> bool:
+        from polyphony.bot import bot
+
+        log.debug(
+            f"{self.user} ({self.pk_member_id}): Checking for self not in guild..."
+        )
+        if set(bot.guilds) & set(self.guilds) == set():
+            log.debug(f"{self.user} ({self.pk_member_id}): Not in guild")
+            return True
+        log.debug(f"{self.user} ({self.pk_member_id}): Is in guild")
+        return False
 
     @property
     def member_name(self) -> str:
