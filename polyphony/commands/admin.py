@@ -234,9 +234,11 @@ class Admin(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.group()
     @is_mod()
     async def syncall(self, ctx: commands.context):
+        if ctx.invoked_subcommand is not None:
+            return
         log.info("Syncing all...")
         logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
         logger.color = discord.Color.orange()
@@ -263,6 +265,58 @@ class Admin(commands.Cog):
         logger.color = discord.Color.green()
         await logger.update()
         log.info("Sync all complete")
+
+    @syncall.command()
+    @is_mod()
+    async def system(self, ctx: commands.context, main_user: discord.User):
+        """
+        Sync system members with PluralKit
+
+        :param main_user: User to sync for
+        :param ctx: Discord Context
+        """
+        logger = LogMessage(
+            ctx, title=f":hourglass: Syncing All Members for {main_user}..."
+        )
+        logger.color = discord.Color.orange()
+        for instance in instances:
+            if instance.main_user_account_id == main_user.id:
+                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+                try:
+                    await instance.sync()
+                    logger.content[
+                        -1
+                    ] = f":white_check_mark: Synced {instance.user.mention}"
+                except TypeError:
+                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+        logger.title = ":white_check_mark: Sync Complete"
+        logger.color = discord.Color.green()
+        await logger.update()
+
+    @syncall.command()
+    @is_mod()
+    async def member(self, ctx: commands.context, system_member: discord.User):
+        """
+        Sync system member with PluralKit
+
+        :param system_member: User to sync
+        :param ctx: Discord Context
+        """
+        logger = LogMessage(ctx, title=f":hourglass: Syncing {system_member}...")
+        logger.color = discord.Color.orange()
+        for instance in instances:
+            if instance.user.id == system_member.id:
+                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+                try:
+                    await instance.sync()
+                    logger.content[
+                        -1
+                    ] = f":white_check_mark: Synced {instance.user.mention}"
+                except TypeError:
+                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+        logger.title = ":white_check_mark: Sync Complete"
+        logger.color = discord.Color.green()
+        await logger.update()
 
     @commands.command()
     @is_mod()
