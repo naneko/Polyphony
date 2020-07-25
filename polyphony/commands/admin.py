@@ -328,7 +328,9 @@ class Admin(commands.Cog):
                 [system_member.id],
             )
             instances.append(create_member_instance(member))
-            await ctx.send(f"{system_member.mention} started by {ctx.message.author}")
+            await ctx.send(
+                f"{system_member.mention} started by {ctx.message.author.mention}"
+            )
             log.info(f"{system_member} has been started by {ctx.message.author}")
 
     @commands.command()
