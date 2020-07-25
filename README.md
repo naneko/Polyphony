@@ -6,6 +6,7 @@ Create a `.env` file in the project root to set your environment variables. Poly
 
 - `DEBUG` - Python Boolean, Activates Debug Mode
 - `TOKEN` - Discord Bot Token
+- `GUILD_ID` - Guild ID of server Polyphony is being used in
 - `DATABASE_URI` - Location of the SQLite database ([See more info here](https://docs.python.org/3/library/sqlite3.html)) (default: (project root)/polyphony/polyphony.db)
 - `MODERATOR_ROLES` - List of role names (default: [Moderator, Moderators])
 - `ALWAYS_SYNC_ROLES` - Role names to always sync during rolesync, like level rewards (default: [])
@@ -15,6 +16,7 @@ Create a `.env` file in the project root to set your environment variables. Poly
 - `SUSPEND_INACTIVE_DAYS` - **Not Implemented Yet** Number of days required for an instance to be considered inactive and auto-suspend (default: 14)
 - `LOGGING_CHANNEL_ID` - **Not Implemented Yet** Channel to log Polyphony events (message edits, deletes, user updates, and errors) to
 - `COMMAND_PREFIX` - The prefix to be used in Discord to activate Polyphony commands (default: ;;)
+- `ADMIN_LOGS_CHANNEL_ID` - Where to put warnings and other logging messages. Make sure it is somewhere you can see. (default: none)
 - `DELETE_LOGS_CHANNEL_ID` - The channel ID where your server puts delete logs, the message ID needs to appear somewhere in the embed (default: 0)
 - `DELETE_LOGS_USER_ID` - The user ID that posts the delete logs (default: 0)
 

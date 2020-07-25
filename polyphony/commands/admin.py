@@ -34,6 +34,7 @@ from polyphony.settings import (
     MODERATOR_ROLES,
     DELETE_LOGS_CHANNEL_ID,
     DELETE_LOGS_USER_ID,
+    GUILD_ID,
 )
 
 log = logging.getLogger("polyphony." + __name__)
@@ -86,11 +87,11 @@ class Admin(commands.Cog):
 
     @list.command()
     @is_mod()
-    async def disabled(self, ctx: commands.context):
-        log.debug("Listing disabled members...")
+    async def suspended(self, ctx: commands.context):
+        log.debug("Listing suspended members...")
         c.execute("SELECT * FROM members WHERE member_enabled == 0")
         member_list = c.fetchall()
-        embed = discord.Embed(title="Inactive Members")
+        embed = discord.Embed(title="Suspended Members")
         await self.send_member_list(ctx, embed, member_list)
 
     @staticmethod
@@ -224,21 +225,13 @@ class Admin(commands.Cog):
                 return
 
         # Success State
-        logger.title = "Registration Successful"
+        logger.title = f"Registration of {member['name']} Successful"
         logger.color = discord.Color.green()
         c.execute("SELECT * FROM tokens WHERE used = 0")
         slots = c.fetchall()
         await logger.log(f"There are now {len(slots)} slots available")
-        await logger.log(
-            f"\nUser is {instance.user.mention}\n*Generate an invite link using `invite [Client ID]`*"
-        )
+        await logger.log(f"\nUser is {instance.user.mention}")
         log.info("New member instance extended and activated")
-        embed = discord.Embed(color=discord.Color.green())
-        embed.set_author(
-            name=f"{dict(member).get('display_name', member['member_name'])} (p.{member['member_name']})",
-            icon_url=member["avatar_url"],
-        )
-        await ctx.send(embed=embed)
 
     @commands.group()
     @is_mod()
@@ -259,14 +252,19 @@ class Admin(commands.Cog):
                 )
                 logger.color = discord.Color.orange()
             await logger.log(f":hourglass: Syncing {instance.user.mention}...")
-            if await instance.sync() is True:
+            sync_state = instance.sync()
+            if await sync_state == 0:
                 logger.content[
                     -1
                 ] = f":white_check_mark: Synced {instance.user.mention}"
-            else:
+            elif sync_state == 1:
                 logger.content[
                     -1
                 ] = f":x: Failed to sync {instance.user.mention} because member ID `{instance.pk_member_id}` was not found on PluralKit's servers"
+            else:
+                logger.content[
+                    -1
+                ] = f":x: Failed to sync {instance.user.mention} becanse main user left server. Instance has been automatically suspended."
         logger.title = ":white_check_mark: Sync Complete"
         logger.color = discord.Color.green()
         await logger.update()
@@ -448,12 +446,13 @@ class Admin(commands.Cog):
             await ctx.send("Adding tokens...")
             log.debug(tokens)
             for index, token in enumerate(tokens):
-                logger = LogMessage(ctx, title=f"Adding token {index}...")
+                logger = LogMessage(ctx, title=f"Adding token #{index+1}...")
                 await logger.init()
                 # Check token
-                await logger.log(f"Checking token {index}...")
-                if not await check_token(token):
-                    logger.title = f"Token {index} Invalid"
+                await logger.log(f"Checking token #{index+1}...")
+                check_result, client_id = await check_token(token)
+                if not check_result:
+                    logger.title = f"Token #{index+1} Invalid"
                     logger.color = discord.Color.red()
                     await logger.log("Bot token is invalid")
                 else:
@@ -461,15 +460,17 @@ class Admin(commands.Cog):
                     if get_token(token) is None:
                         log.info("Adding new token to database")
                         insert_token(token, False)
-                        logger.title = f"Bot token {index} added"
+                        logger.title = f"Bot token #{index+1} added"
                         logger.color = discord.Color.green()
                         c.execute("SELECT * FROM tokens WHERE used = 0")
                         slots = c.fetchall()
+                        from polyphony.bot import bot
+
                         await logger.send(
-                            f"There are now {len(slots)} slot(s) available"
+                            f"[Invite to Server]({discord.utils.oauth_url(client_id, permissions=discord.Permissions(DEFAULT_INSTANCE_PERMS), guild=bot.get_guild(GUILD_ID))})\n\n**Client ID:** {client_id}\nThere are now {len(slots)} slot(s) available"
                         )
                     else:
-                        logger.title = f"Token {index} already in database"
+                        logger.title = f"Token #{index+1} already in database"
                         logger.color = discord.Color.orange()
                         await logger.log("Bot token already in database")
         elif ctx.channel.type is not discord.ChannelType.private:

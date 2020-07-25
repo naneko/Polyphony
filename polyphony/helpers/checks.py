@@ -1,6 +1,7 @@
 """
 Checks to perform when running commands
 """
+import asyncio
 import logging
 
 import discord
@@ -56,7 +57,7 @@ def is_polyphony_user(allow_mods: bool = False):
     return commands.check(predicate)
 
 
-async def check_token(token: str) -> bool:
+async def check_token(token: str) -> [bool, int]:
     """
     Checks discord token is valid
 
@@ -64,13 +65,17 @@ async def check_token(token: str) -> bool:
     :return: boolean
     """
     out = True
+    client_id = None
     test_client = discord.Client()
 
     log.debug("Checking bot token...")
 
     try:
         log.debug("Attempting login...")
-        await test_client.login(token)
+        loop = asyncio.get_event_loop()
+        loop.create_task(test_client.start(token))
+        await test_client.wait_until_ready()
+        client_id = test_client.user.id
         log.debug("Login successs")
     except discord.LoginFailure:
         log.debug("Bot token invalid")
@@ -79,4 +84,4 @@ async def check_token(token: str) -> bool:
         await test_client.close()
         log.debug("Logout of test instance complete.")
 
-    return out
+    return [out, client_id]
