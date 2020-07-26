@@ -15,7 +15,13 @@ from polyphony.helpers.database import conn, c
 from polyphony.helpers.log_to_channel import send_to_log_channel
 from polyphony.helpers.message_cache import new_proxied_message
 from polyphony.helpers.pluralkit import pk_get_member
-from polyphony.settings import COMMAND_PREFIX, DEFAULT_INSTANCE_PERMS, GUILD_ID
+from polyphony.settings import (
+    COMMAND_PREFIX,
+    DEFAULT_INSTANCE_PERMS,
+    GUILD_ID,
+    INSTANCE_ADD_ROLES,
+    INSTANCE_REMOVE_ROLES,
+)
 
 log = logging.getLogger(__name__)
 
@@ -84,6 +90,9 @@ class PolyphonyInstance(discord.Client):
         # Update Username
         await self.user.edit(username=self.member_name)
 
+        # Update Roles
+        await self.update_default_roles()
+
         # Update Avatar
         self.pk_avatar_url: str = self.__pk_avatar_url
 
@@ -96,7 +105,7 @@ class PolyphonyInstance(discord.Client):
         # Update Presence
         await self.change_presence(
             activity=discord.Activity(
-                name=f"{self.get_user(self.main_user_account_id)}#{self.user.discriminator}",
+                name=f"{self.get_user(self.main_user_account_id)}",
                 type=discord.ActivityType.listening,
             )
         )
@@ -146,6 +155,27 @@ class PolyphonyInstance(discord.Client):
                     color=discord.Color.red(),
                 )
                 await ctx.channel.send(embed=embed)
+
+    async def update_default_roles(self):
+        log.debug(f"{self.user} ({self.pk_member_id}): Updating default roles")
+        add_roles = []
+        remove_roles = []
+        for role in INSTANCE_ADD_ROLES:
+            role = discord.utils.get(self.get_guild(GUILD_ID).roles, name=role)
+            if role is not None:
+                add_roles.append(role)
+        for role in INSTANCE_REMOVE_ROLES:
+            role = discord.utils.get(self.get_guild(GUILD_ID).roles, name=role)
+            if role is not None:
+                remove_roles.append(role)
+        from polyphony.bot import bot
+
+        if add_roles:
+            await bot.get_guild(GUILD_ID).get_member(self.user.id).add_roles(*add_roles)
+        if remove_roles:
+            await bot.get_guild(GUILD_ID).get_member(self.user.id).remove_roles(
+                *remove_roles
+            )
 
     async def push_nickname_updates(self):
         log.debug(f"{self.user} ({self.pk_member_id}): Updating nickname in guilds")
@@ -340,11 +370,11 @@ class PolyphonyInstance(discord.Client):
             log.debug(
                 f"{self.user} ({self.pk_member_id}): Updating presence to {after.status}"
             )
-            self_user = self.get_user(self.main_user_account_id)
             await self.change_presence(
                 status=after.status,
                 activity=discord.Activity(
-                    name={self_user.name}, type=discord.ActivityType.listening,
+                    name=f"{self.get_user(self.main_user_account_id)}",
+                    type=discord.ActivityType.listening,
                 ),
             )
 

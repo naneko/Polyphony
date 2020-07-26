@@ -380,16 +380,19 @@ class Admin(commands.Cog):
         # TODO: Provide more verbose feedback from command
         await ctx.message.delete()
         member = get_member_by_discord_id(system_member.id)
-        if member:
-            c.execute(
-                "UPDATE members SET member_enabled = 1 WHERE member_account_id = ?",
-                [system_member.id],
-            )
-            instances.append(create_member_instance(member))
-            await ctx.send(
-                f"{system_member.mention} started by {ctx.message.author.mention}"
-            )
-            log.info(f"{system_member} has been started by {ctx.message.author}")
+        if member is not None:
+            if not member["member_enabled"]:
+                c.execute(
+                    "UPDATE members SET member_enabled = 1 WHERE member_account_id = ?",
+                    [system_member.id],
+                )
+                instances.append(create_member_instance(member))
+                await ctx.send(
+                    f"{system_member.mention} started by {ctx.message.author.mention}"
+                )
+                log.info(f"{system_member} has been started by {ctx.message.author}")
+            else:
+                await ctx.send(f"{system_member.mention} is already running")
 
     @commands.command()
     @is_mod()
