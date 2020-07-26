@@ -327,17 +327,21 @@ class User(commands.Cog):
                 description=f"Assign yourself the roles you want for {system_member.mention} and then type `done`",
                 color=discord.Color.orange(),
             )
+            saved_roles_str = " ".join([role.mention for role in ctx.author.roles[1:]])
             embed.add_field(
                 name=f"`{ctx.author.display_name}`'s Roles *(saved)*",
-                value=" ".join([role.mention for role in ctx.author.roles[1:]])
-                or "None",
+                value=saved_roles_str
+                if len(saved_roles_str) < 1024
+                else "Too many to show" or "None",
             )
             embed_member_original_roles = " ".join(
                 [role.mention for role in system_member.roles[1:]]
             )
             embed.add_field(
                 name=f"`{system_member.display_name}`'s Original Roles",
-                value=embed_member_original_roles or "None",
+                value=embed_member_original_roles
+                if len(embed_member_original_roles)
+                else "Too many to show" or "None",
             )
             embed.set_footer(
                 text="Will timeout in 5 minutes. Changes may take a moment to update."
@@ -402,13 +406,18 @@ class User(commands.Cog):
                     )
                     embed.add_field(
                         name=f"`{system_member.display_name}`'s Old Roles",
-                        value=embed_member_original_roles or "None",
+                        value=embed_member_original_roles
+                        if len(embed_member_original_roles) < 1024
+                        else "Too many to show" or "None",
+                    )
+                    new_roles_str = " ".join(
+                        [role.mention for role in system_member.roles[1:]]
                     )
                     embed.add_field(
                         name=f"`{system_member.display_name}`'s New Roles",
-                        value=" ".join(
-                            [role.mention for role in system_member.roles[1:]]
-                        ),
+                        value=new_roles_str
+                        if len(new_roles_str) < 1024
+                        else "Too many to show" or "None",
                     )
                     embed.set_author(
                         name=system_member.display_name,
@@ -438,11 +447,16 @@ class User(commands.Cog):
                 )
                 embed.add_field(
                     name=f"`{system_member.display_name}`'s Restored Roles",
-                    value=embed_member_original_roles or "None",
+                    value=embed_member_original_roles
+                    if len(embed_member_original_roles) < 1024
+                    else "Too many to show" or "None",
                 )
+                unsynced_roles_str = " ".join([role.mention for role in unsynced_roles])
                 embed.add_field(
                     name=f"`{system_member.display_name}`'s Unsaved Roles Due to Timeout",
-                    value=" ".join([role.mention for role in unsynced_roles]),
+                    value=unsynced_roles_str
+                    if len(unsynced_roles_str) < 1024
+                    else "Too many to show" or "None",
                 )
                 embed.set_footer(
                     text='Role sync times out after 5 minutes. Type "done" next time to save changes.'

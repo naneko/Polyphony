@@ -25,7 +25,7 @@ DEBUG: bool = bool(os.getenv("DEBUG", False))
 TOKEN: str = os.getenv("TOKEN")
 # TODO: Replace guild-specific checks to just use configured Guild ID (and once this happens, don't allow the bot to start without it)
 # TODO: Log warning when running in guild that is not specified guild ID
-GUILD_ID: int = int(os.getenv("GUILD_ID"))
+GUILD_ID: int = int(os.getenv("GUILD_ID", 0))
 DATABASE_URI: str = os.getenv("DATABASE_URI")
 MODERATOR_ROLES: list = os.getenv("MODERATOR_ROLES", "Moderator,Moderators").split(",")
 INSTANCE_ADD_ROLES: list = os.getenv("INSTANCE_ADD_ROLES", "").split(",")
@@ -37,7 +37,7 @@ DEFAULT_INSTANCE_PERMS: int = os.getenv("DEFAULT_INSTANCE_PERMS", 0)
 SUSPEND_ON_LEAVE: bool = os.getenv("SUSPEND_ON_LEAVE", True)  # TODO: Implement
 SUSPEND_INACTIVE_DAYS: int = os.getenv("SUSPEND_INACTIVE_DAYS", 14)  # TODO: Implement
 COMMAND_PREFIX: str = os.getenv("COMMAND_PREFIX", ";;")
-ADMIN_LOGS_CHANNEL_ID: int = int(os.getenv("ADMIN_LOGS_CHANNEL_ID"))
+ADMIN_LOGS_CHANNEL_ID: int = int(os.getenv("ADMIN_LOGS_CHANNEL_ID", 0))
 # 0 to prevent accidental "None" value from API:
 DELETE_LOGS_CHANNEL_ID: int = int(os.getenv("DELETE_LOGS_CHANNEL_ID", 0))
 DELETE_LOGS_USER_ID: int = int(os.getenv("DELETE_LOGS_USER_ID", 0))
@@ -70,6 +70,6 @@ if DATABASE_URI is None:
     )
     DATABASE_URI = "../polyphony.db"
 
-if GUILD_ID is None:
+if GUILD_ID == 0:
     log.error("Guild ID is not set")
     exit()
