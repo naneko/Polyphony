@@ -5,7 +5,7 @@ from discord.ext import commands
 
 from .helpers.checks import is_mod
 from .helpers.database import init_db, get_enabled_members
-from .helpers.instances import create_member_instance
+from .helpers.instances import create_member_instance, instances
 from .helpers.message_cache import recently_proxied_messages
 from .settings import (
     TOKEN,
@@ -113,15 +113,15 @@ async def on_message(msg: discord.Message):
     await bot.process_commands(msg)
     if msg.channel.id == DELETE_LOGS_CHANNEL_ID or msg.author.id == DELETE_LOGS_USER_ID:
 
-        log.debug(f"New message {msg.id} that might be a delete log found.")
-
         try:
             embed_text = msg.embeds[0].description
         except IndexError:
             return
 
         for oldmsg in recently_proxied_messages:
-            if str(oldmsg.id) in embed_text:
+            if str(oldmsg.id) in embed_text and not any(
+                [str(instance.user.id) in embed_text for instance in instances]
+            ):
                 log.debug(
                     f"Deleting delete log message {msg.id} (was about {oldmsg.id})"
                 )
