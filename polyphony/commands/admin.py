@@ -27,13 +27,10 @@ from polyphony.helpers.database import (
 )
 from polyphony.helpers.instances import instances, create_member_instance
 from polyphony.helpers.log_message import LogMessage
-from polyphony.helpers.message_cache import recently_proxied_messages
 from polyphony.helpers.pluralkit import pk_get_member
 from polyphony.settings import (
     DEFAULT_INSTANCE_PERMS,
     MODERATOR_ROLES,
-    DELETE_LOGS_CHANNEL_ID,
-    DELETE_LOGS_USER_ID,
     GUILD_ID,
 )
 
@@ -492,26 +489,6 @@ class Admin(commands.Cog):
     async def on_member_leave(self, member):
         # TODO: Check if its a Polyphony member and suspend all system members if it is
         pass
-
-    async def on_message(self, msg: discord.Message):
-        if (
-            msg.channel.id == DELETE_LOGS_CHANNEL_ID
-            or msg.author.id == DELETE_LOGS_USER_ID
-        ):
-
-            log.debug(f"New message {msg.id} that might be a delete log found.")
-
-            try:
-                embed_text = msg.embeds[0].description
-            except IndexError:
-                return
-
-            for oldmsg in recently_proxied_messages:
-                if str(oldmsg.id) in embed_text:
-                    log.debug(
-                        f"Deleting delete log message {msg.id} (was about {oldmsg.id})"
-                    )
-                    await msg.delete()
 
 
 def setup(bot: commands.bot):
