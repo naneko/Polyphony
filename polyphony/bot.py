@@ -5,8 +5,12 @@ from discord.ext import commands
 
 from .helpers.checks import is_mod
 from .helpers.database import init_db, get_enabled_members
-from .helpers.helpers import create_member_instance
-from .settings import TOKEN, DEBUG, COMMAND_PREFIX
+from .helpers.instances import create_member_instance
+from .settings import (
+    TOKEN,
+    DEBUG,
+    COMMAND_PREFIX,
+)
 
 log = logging.getLogger(__name__)
 

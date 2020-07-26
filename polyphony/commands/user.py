@@ -12,7 +12,13 @@ from discord.ext import commands
 
 from polyphony.helpers.checks import is_polyphony_user, is_mod
 from polyphony.helpers.database import c
-from polyphony.helpers.helpers import instances, LogMessage
+from polyphony.helpers.instances import instances
+from polyphony.helpers.log_message import LogMessage
+from polyphony.settings import (
+    NEVER_SYNC_ROLES,
+    ALWAYS_SYNC_ROLES,
+    DISABLE_ROLESYNC_ROLES,
+)
 
 log = logging.getLogger("polyphony." + __name__)
 
@@ -49,7 +55,8 @@ class User(commands.Cog):
             )
             embed.add_field(
                 name=":inbox_tray: __Syncing from PluralKit__",
-                value="`;;sync` will sync changes for all your members",
+                value="`;;sync` will sync changes for all your members\n"
+                "`;;sync member (member mention)` will sync changes for one specific member",
                 inline=False,
             )
             embed.add_field(
@@ -86,8 +93,9 @@ class User(commands.Cog):
         )
         embed.add_field(
             name=":inbox_tray: `;;sync`",
-            value="**Syncs information from PluralKit for all members**"
-            "\n*Tip: Setting a display name in PluralKit will set a nickname that is different from the bot username*",
+            value="**Syncs information from PluralKit for all members**\n"
+            "`;;sync member (member mention)` will sync changes for one specific member\n"
+            "*Tip: Setting a display name in PluralKit will set a nickname that is different from the bot username*",
             inline=False,
         )
         embed.add_field(
@@ -156,7 +164,7 @@ class User(commands.Cog):
             )
         await ctx.channel.send(embed=embed)
 
-    @commands.command()
+    @commands.group()
     @is_polyphony_user()
     async def sync(self, ctx: commands.context):
         """
@@ -164,10 +172,40 @@ class User(commands.Cog):
 
         :param ctx: Discord Context
         """
+        if ctx.invoked_subcommand is not None:
+            return
         logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
         logger.color = discord.Color.orange()
         for instance in instances:
             if instance.main_user_account_id == ctx.author.id:
+                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+                try:
+                    await instance.sync()
+                    logger.content[
+                        -1
+                    ] = f":white_check_mark: Synced {instance.user.mention}"
+                except TypeError:
+                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+        logger.title = ":white_check_mark: Sync Complete"
+        logger.color = discord.Color.green()
+        await logger.update()
+
+    @sync.command()
+    @is_polyphony_user()
+    async def member(self, ctx: commands.context, system_member: discord.User):
+        """
+        Sync system member with PluralKit
+
+        :param system_member: User to sync
+        :param ctx: Discord Context
+        """
+        logger = LogMessage(ctx, title=f":hourglass: Syncing {system_member}...")
+        logger.color = discord.Color.orange()
+        for instance in instances:
+            if (
+                instance.user.id == system_member.id
+                and instance.main_user_account_id == ctx.author.id
+            ):
                 await logger.log(f":hourglass: Syncing {instance.user.mention}...")
                 try:
                     await instance.sync()
@@ -262,6 +300,11 @@ class User(commands.Cog):
         :param system_member: System member to sync roles with
         :param ctx: Discord Context
         """
+        if any(
+            [role.name in DISABLE_ROLESYNC_ROLES for role in ctx.message.author.roles]
+        ):
+            # Don't execute if has role that disables rolesync
+            return
         c.execute(
             "SELECT * FROM members WHERE discord_account_id == ? AND member_account_id == ?",
             [ctx.author.id, system_member.id],
@@ -269,26 +312,36 @@ class User(commands.Cog):
         if c.fetchone():
 
             # Get User's Roles
-            user_roles = [role for role in ctx.author.roles[1:]]
+            user_roles = []
+            for role in ctx.author.roles[1:]:
+                if role.name not in ALWAYS_SYNC_ROLES:
+                    user_roles.append(role)
             # Get Member's Roles
-            member_roles = [role for role in system_member.roles[1:]]
+            member_roles = []
+            for role in system_member.roles[1:]:
+                if role.name not in NEVER_SYNC_ROLES:
+                    member_roles.append(role)
 
             embed = discord.Embed(
                 title="Syncing roles...",
                 description=f"Assign yourself the roles you want for {system_member.mention} and then type `done`",
                 color=discord.Color.orange(),
             )
+            saved_roles_str = " ".join([role.mention for role in ctx.author.roles[1:]])
             embed.add_field(
                 name=f"`{ctx.author.display_name}`'s Roles *(saved)*",
-                value=" ".join([role.mention for role in ctx.author.roles[1:]])
-                or "None",
+                value=saved_roles_str
+                if len(saved_roles_str) < 1024
+                else "Too many to show" or "None",
             )
             embed_member_original_roles = " ".join(
                 [role.mention for role in system_member.roles[1:]]
             )
             embed.add_field(
                 name=f"`{system_member.display_name}`'s Original Roles",
-                value=embed_member_original_roles or "None",
+                value=embed_member_original_roles
+                if len(embed_member_original_roles)
+                else "Too many to show" or "None",
             )
             embed.set_footer(
                 text="Will timeout in 5 minutes. Changes may take a moment to update."
@@ -305,8 +358,8 @@ class User(commands.Cog):
 
             # Remove user's roles and give member's roles
             async with ctx.channel.typing():
-                await ctx.author.remove_roles(*ctx.author.roles[1:])
-                await ctx.author.add_roles(*system_member.roles[1:])
+                await ctx.author.remove_roles(*user_roles)
+                await ctx.author.add_roles(*member_roles)
             loading_embed = discord.Embed(
                 title="Type `done` to sync your roles.", color=discord.Color.green()
             )
@@ -328,12 +381,17 @@ class User(commands.Cog):
 
                 # On done, add new roles to member, remove new roles from user, and old roles to user
                 async with ctx.channel.typing():
-                    new_roles = ctx.author.roles[1:]
+                    new_roles = [role for role in ctx.author.roles[1:]]
+
+                    roles_to_remove = []
+                    for role in new_roles:
+                        if role.name not in ALWAYS_SYNC_ROLES:
+                            roles_to_remove.append(role)
 
                     # Remove all roles from member and main user
                     await asyncio.gather(
                         system_member.remove_roles(*member_roles),
-                        ctx.author.remove_roles(*new_roles),
+                        ctx.author.remove_roles(*roles_to_remove),
                     )
 
                     # Add new roles to member and restore user roles
@@ -348,13 +406,18 @@ class User(commands.Cog):
                     )
                     embed.add_field(
                         name=f"`{system_member.display_name}`'s Old Roles",
-                        value=embed_member_original_roles or "None",
+                        value=embed_member_original_roles
+                        if len(embed_member_original_roles) < 1024
+                        else "Too many to show" or "None",
+                    )
+                    new_roles_str = " ".join(
+                        [role.mention for role in system_member.roles[1:]]
                     )
                     embed.add_field(
                         name=f"`{system_member.display_name}`'s New Roles",
-                        value=" ".join(
-                            [role.mention for role in system_member.roles[1:]]
-                        ),
+                        value=new_roles_str
+                        if len(new_roles_str) < 1024
+                        else "Too many to show" or "None",
                     )
                     embed.set_author(
                         name=system_member.display_name,
@@ -363,7 +426,11 @@ class User(commands.Cog):
                     await instructions.edit(content="", embed=embed)
                     await loading.delete()
             except asyncio.TimeoutError:
-                member_roles_to_remove = system_member.roles[1:]
+                unsynced_roles = system_member.roles[1:]
+                roles_to_remove = []
+                for role in system_member.roles[1:]:
+                    if role.name not in ALWAYS_SYNC_ROLES:
+                        roles_to_remove.append(role)
                 loading_embed = discord.Embed(
                     title="*Timed out. Hold on while I restore your roles...*",
                     color=discord.Color.orange(),
@@ -371,7 +438,7 @@ class User(commands.Cog):
                 await loading.edit(embed=loading_embed)
                 async with ctx.channel.typing():
                     await system_member.add_roles(*member_roles)
-                    await ctx.author.remove_roles(*member_roles_to_remove)
+                    await ctx.author.remove_roles(*roles_to_remove)
                     await ctx.author.add_roles(*user_roles)
                 embed = discord.Embed(
                     title="Role Sync Timed Out",
@@ -380,11 +447,16 @@ class User(commands.Cog):
                 )
                 embed.add_field(
                     name=f"`{system_member.display_name}`'s Restored Roles",
-                    value=embed_member_original_roles or "None",
+                    value=embed_member_original_roles
+                    if len(embed_member_original_roles) < 1024
+                    else "Too many to show" or "None",
                 )
+                unsynced_roles_str = " ".join([role.mention for role in unsynced_roles])
                 embed.add_field(
                     name=f"`{system_member.display_name}`'s Unsaved Roles Due to Timeout",
-                    value=" ".join([role.mention for role in member_roles_to_remove]),
+                    value=unsynced_roles_str
+                    if len(unsynced_roles_str) < 1024
+                    else "Too many to show" or "None",
                 )
                 embed.set_footer(
                     text='Role sync times out after 5 minutes. Type "done" next time to save changes.'

@@ -2,6 +2,7 @@
 Admin commands to configure polyphony
 """
 import asyncio
+import json
 import logging
 import sqlite3
 from typing import List
@@ -10,7 +11,6 @@ import discord
 from discord.ext import commands
 from disputils import BotConfirmation
 
-from polyphony.bot import create_member_instance
 from polyphony.helpers.checks import is_mod, check_token
 from polyphony.helpers.database import (
     insert_member,
@@ -25,9 +25,17 @@ from polyphony.helpers.database import (
     get_member_by_discord_id,
     conn,
 )
-from polyphony.helpers.helpers import LogMessage, instances
+from polyphony.helpers.instances import instances, create_member_instance
+from polyphony.helpers.log_message import LogMessage
+from polyphony.helpers.message_cache import recently_proxied_messages
 from polyphony.helpers.pluralkit import pk_get_member
-from polyphony.settings import DEFAULT_INSTANCE_PERMS, MODERATOR_ROLES
+from polyphony.settings import (
+    DEFAULT_INSTANCE_PERMS,
+    MODERATOR_ROLES,
+    DELETE_LOGS_CHANNEL_ID,
+    DELETE_LOGS_USER_ID,
+    GUILD_ID,
+)
 
 log = logging.getLogger("polyphony." + __name__)
 
@@ -79,11 +87,11 @@ class Admin(commands.Cog):
 
     @list.command()
     @is_mod()
-    async def disabled(self, ctx: commands.context):
-        log.debug("Listing disabled members...")
+    async def suspended(self, ctx: commands.context):
+        log.debug("Listing suspended members...")
         c.execute("SELECT * FROM members WHERE member_enabled == 0")
         member_list = c.fetchall()
-        embed = discord.Embed(title="Inactive Members")
+        embed = discord.Embed(title="Suspended Members")
         await self.send_member_list(ctx, embed, member_list)
 
     @staticmethod
@@ -99,9 +107,18 @@ class Admin(commands.Cog):
                 embed = discord.Embed()
             member_user = ctx.guild.get_member(member["member_account_id"])
             owner_user = ctx.guild.get_member(member["discord_account_id"])
+            tags = []
+            for tag in json.loads(member["pk_proxy_tags"]):
+                tags.append(
+                    "`"
+                    + (tag.get("prefix") or "")
+                    + "text"
+                    + (tag.get("suffix") or "")
+                    + "`"
+                )
             embed.add_field(
                 name=dict(member).get("display_name", member["member_name"]),
-                value=f"""**User:** {member_user.mention} (`{member_user.id}`)\n**Account Owner:** {owner_user.mention if hasattr(owner_user, 'mention') else "*Unable to get User*"} (`{member["discord_account_id"]}`)\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Enabled:** `{bool(member['member_enabled'])}`""",
+                value=f"""**User:** {member_user.mention} (`{member_user.id}`)\n**Account Owner:** {owner_user.mention if hasattr(owner_user, 'mention') else "*Unable to get User*"} (`{member["discord_account_id"]}`)\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Tag(s):** {' or '.join(tags)}\n**Enabled:** `{bool(member['member_enabled'])}`""",
                 inline=True,
             )
 
@@ -208,25 +225,19 @@ class Admin(commands.Cog):
                 return
 
         # Success State
-        logger.title = "Registration Successful"
+        logger.title = f"Registration of {member['name']} Successful"
         logger.color = discord.Color.green()
         c.execute("SELECT * FROM tokens WHERE used = 0")
         slots = c.fetchall()
         await logger.log(f"There are now {len(slots)} slots available")
-        await logger.log(
-            f"\nUser is {instance.user.mention}\n*Generate an invite link using `invite [Client ID]`*"
-        )
+        await logger.log(f"\nUser is {instance.user.mention}")
         log.info("New member instance extended and activated")
-        embed = discord.Embed(color=discord.Color.green())
-        embed.set_author(
-            name=f"{dict(member).get('display_name', member['member_name'])} (p.{member['member_name']})",
-            icon_url=member["avatar_url"],
-        )
-        await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.group()
     @is_mod()
     async def syncall(self, ctx: commands.context):
+        if ctx.invoked_subcommand is not None:
+            return
         log.info("Syncing all...")
         logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
         logger.color = discord.Color.orange()
@@ -241,18 +252,75 @@ class Admin(commands.Cog):
                 )
                 logger.color = discord.Color.orange()
             await logger.log(f":hourglass: Syncing {instance.user.mention}...")
-            if await instance.sync() is True:
+            sync_state = instance.sync()
+            if await sync_state == 0:
                 logger.content[
                     -1
                 ] = f":white_check_mark: Synced {instance.user.mention}"
-            else:
+            elif sync_state == 1:
                 logger.content[
                     -1
                 ] = f":x: Failed to sync {instance.user.mention} because member ID `{instance.pk_member_id}` was not found on PluralKit's servers"
+            else:
+                logger.content[
+                    -1
+                ] = f":x: Failed to sync {instance.user.mention} becanse main user left server. Instance has been automatically suspended."
         logger.title = ":white_check_mark: Sync Complete"
         logger.color = discord.Color.green()
         await logger.update()
         log.info("Sync all complete")
+
+    @syncall.command()
+    @is_mod()
+    async def system(self, ctx: commands.context, main_user: discord.User):
+        """
+        Sync system members with PluralKit
+
+        :param main_user: User to sync for
+        :param ctx: Discord Context
+        """
+        logger = LogMessage(
+            ctx, title=f":hourglass: Syncing All Members for {main_user}..."
+        )
+        logger.color = discord.Color.orange()
+        for instance in instances:
+            if instance.main_user_account_id == main_user.id:
+                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+                try:
+                    await instance.sync()
+                    logger.content[
+                        -1
+                    ] = f":white_check_mark: Synced {instance.user.mention}"
+                except TypeError:
+                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+        logger.title = ":white_check_mark: Sync Complete"
+        logger.color = discord.Color.green()
+        await logger.update()
+
+    @syncall.command()
+    @is_mod()
+    async def member(self, ctx: commands.context, system_member: discord.User):
+        """
+        Sync system member with PluralKit
+
+        :param system_member: User to sync
+        :param ctx: Discord Context
+        """
+        logger = LogMessage(ctx, title=f":hourglass: Syncing {system_member}...")
+        logger.color = discord.Color.orange()
+        for instance in instances:
+            if instance.user.id == system_member.id:
+                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+                try:
+                    await instance.sync()
+                    logger.content[
+                        -1
+                    ] = f":white_check_mark: Synced {instance.user.mention}"
+                except TypeError:
+                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+        logger.title = ":white_check_mark: Sync Complete"
+        logger.color = discord.Color.green()
+        await logger.update()
 
     @commands.command()
     @is_mod()
@@ -312,14 +380,19 @@ class Admin(commands.Cog):
         # TODO: Provide more verbose feedback from command
         await ctx.message.delete()
         member = get_member_by_discord_id(system_member.id)
-        if member:
-            c.execute(
-                "UPDATE members SET member_enabled = 1 WHERE member_account_id = ?",
-                [system_member.id],
-            )
-            instances.append(create_member_instance(member))
-            await ctx.send(f"{system_member.mention} started by {ctx.message.author}")
-            log.info(f"{system_member} has been started by {ctx.message.author}")
+        if member is not None:
+            if not member["member_enabled"]:
+                c.execute(
+                    "UPDATE members SET member_enabled = 1 WHERE member_account_id = ?",
+                    [system_member.id],
+                )
+                instances.append(create_member_instance(member))
+                await ctx.send(
+                    f"{system_member.mention} started by {ctx.message.author.mention}"
+                )
+                log.info(f"{system_member} has been started by {ctx.message.author}")
+            else:
+                await ctx.send(f"{system_member.mention} is already running")
 
     @commands.command()
     @is_mod()
@@ -376,12 +449,13 @@ class Admin(commands.Cog):
             await ctx.send("Adding tokens...")
             log.debug(tokens)
             for index, token in enumerate(tokens):
-                logger = LogMessage(ctx, title=f"Adding token {index}...")
+                logger = LogMessage(ctx, title=f"Adding token #{index+1}...")
                 await logger.init()
                 # Check token
-                await logger.log(f"Checking token {index}...")
-                if not await check_token(token):
-                    logger.title = f"Token {index} Invalid"
+                await logger.log(f"Checking token #{index+1}...")
+                check_result, client_id = await check_token(token)
+                if not check_result:
+                    logger.title = f"Token #{index+1} Invalid"
                     logger.color = discord.Color.red()
                     await logger.log("Bot token is invalid")
                 else:
@@ -389,15 +463,17 @@ class Admin(commands.Cog):
                     if get_token(token) is None:
                         log.info("Adding new token to database")
                         insert_token(token, False)
-                        logger.title = f"Bot token {index} added"
+                        logger.title = f"Bot token #{index+1} added"
                         logger.color = discord.Color.green()
                         c.execute("SELECT * FROM tokens WHERE used = 0")
                         slots = c.fetchall()
+                        from polyphony.bot import bot
+
                         await logger.send(
-                            f"There are now {len(slots)} slot(s) available"
+                            f"[Invite to Server]({discord.utils.oauth_url(client_id, permissions=discord.Permissions(DEFAULT_INSTANCE_PERMS), guild=bot.get_guild(GUILD_ID))})\n\n**Client ID:** {client_id}\nThere are now {len(slots)} slot(s) available"
                         )
                     else:
-                        logger.title = f"Token {index} already in database"
+                        logger.title = f"Token #{index+1} already in database"
                         logger.color = discord.Color.orange()
                         await logger.log("Bot token already in database")
         elif ctx.channel.type is not discord.ChannelType.private:
@@ -416,6 +492,26 @@ class Admin(commands.Cog):
     async def on_member_leave(self, member):
         # TODO: Check if its a Polyphony member and suspend all system members if it is
         pass
+
+    async def on_message(self, msg: discord.Message):
+        if (
+            msg.channel.id == DELETE_LOGS_CHANNEL_ID
+            or msg.author.id == DELETE_LOGS_USER_ID
+        ):
+
+            log.debug(f"New message {msg.id} that might be a delete log found.")
+
+            try:
+                embed_text = msg.embeds[0].description
+            except IndexError:
+                return
+
+            for oldmsg in recently_proxied_messages:
+                if str(oldmsg.id) in embed_text:
+                    log.debug(
+                        f"Deleting delete log message {msg.id} (was about {oldmsg.id})"
+                    )
+                    await msg.delete()
 
 
 def setup(bot: commands.bot):
