@@ -110,11 +110,6 @@ async def reload(ctx: commands.context):
 
 @bot.event
 async def on_message(msg: discord.Message):
-    # print(msg.channel.id)
-    # print(DELETE_LOGS_CHANNEL_ID)
-    # print(msg.author.id)
-    # print(DELETE_LOGS_USER_ID)
-    # print("---")
     await bot.process_commands(msg)
     if msg.channel.id == DELETE_LOGS_CHANNEL_ID or msg.author.id == DELETE_LOGS_USER_ID:
 
