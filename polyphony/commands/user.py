@@ -14,6 +14,11 @@ from polyphony.helpers.checks import is_polyphony_user, is_mod
 from polyphony.helpers.database import c
 from polyphony.helpers.instances import instances
 from polyphony.helpers.log_message import LogMessage
+from polyphony.settings import (
+    NEVER_SYNC_ROLES,
+    ALWAYS_SYNC_ROLES,
+    DISABLE_ROLESYNC_ROLES,
+)
 
 log = logging.getLogger("polyphony." + __name__)
 
@@ -295,6 +300,11 @@ class User(commands.Cog):
         :param system_member: System member to sync roles with
         :param ctx: Discord Context
         """
+        if any(
+            [role.name in DISABLE_ROLESYNC_ROLES for role in ctx.message.author.roles]
+        ):
+            # Don't execute if has role that disables rolesync
+            return
         c.execute(
             "SELECT * FROM members WHERE discord_account_id == ? AND member_account_id == ?",
             [ctx.author.id, system_member.id],
@@ -302,9 +312,15 @@ class User(commands.Cog):
         if c.fetchone():
 
             # Get User's Roles
-            user_roles = [role for role in ctx.author.roles[1:]]
+            user_roles = []
+            for role in ctx.author.roles[1:]:
+                if role.name not in ALWAYS_SYNC_ROLES:
+                    user_roles.append(role)
             # Get Member's Roles
-            member_roles = [role for role in system_member.roles[1:]]
+            member_roles = []
+            for role in system_member.roles[1:]:
+                if role.name not in NEVER_SYNC_ROLES:
+                    member_roles.append(role)
 
             embed = discord.Embed(
                 title="Syncing roles...",
@@ -338,8 +354,8 @@ class User(commands.Cog):
 
             # Remove user's roles and give member's roles
             async with ctx.channel.typing():
-                await ctx.author.remove_roles(*ctx.author.roles[1:])
-                await ctx.author.add_roles(*system_member.roles[1:])
+                await ctx.author.remove_roles(*user_roles)
+                await ctx.author.add_roles(*member_roles)
             loading_embed = discord.Embed(
                 title="Type `done` to sync your roles.", color=discord.Color.green()
             )
@@ -361,12 +377,17 @@ class User(commands.Cog):
 
                 # On done, add new roles to member, remove new roles from user, and old roles to user
                 async with ctx.channel.typing():
-                    new_roles = ctx.author.roles[1:]
+                    new_roles = [role for role in ctx.author.roles[1:]]
+
+                    roles_to_remove = []
+                    for role in new_roles:
+                        if role.name not in ALWAYS_SYNC_ROLES:
+                            roles_to_remove.append(role)
 
                     # Remove all roles from member and main user
                     await asyncio.gather(
                         system_member.remove_roles(*member_roles),
-                        ctx.author.remove_roles(*new_roles),
+                        ctx.author.remove_roles(*roles_to_remove),
                     )
 
                     # Add new roles to member and restore user roles
@@ -396,7 +417,11 @@ class User(commands.Cog):
                     await instructions.edit(content="", embed=embed)
                     await loading.delete()
             except asyncio.TimeoutError:
-                member_roles_to_remove = system_member.roles[1:]
+                unsynced_roles = system_member.roles[1:]
+                roles_to_remove = []
+                for role in system_member.roles[1:]:
+                    if role.name not in ALWAYS_SYNC_ROLES:
+                        roles_to_remove.append(role)
                 loading_embed = discord.Embed(
                     title="*Timed out. Hold on while I restore your roles...*",
                     color=discord.Color.orange(),
@@ -404,7 +429,7 @@ class User(commands.Cog):
                 await loading.edit(embed=loading_embed)
                 async with ctx.channel.typing():
                     await system_member.add_roles(*member_roles)
-                    await ctx.author.remove_roles(*member_roles_to_remove)
+                    await ctx.author.remove_roles(*roles_to_remove)
                     await ctx.author.add_roles(*user_roles)
                 embed = discord.Embed(
                     title="Role Sync Timed Out",
@@ -417,7 +442,7 @@ class User(commands.Cog):
                 )
                 embed.add_field(
                     name=f"`{system_member.display_name}`'s Unsaved Roles Due to Timeout",
-                    value=" ".join([role.mention for role in member_roles_to_remove]),
+                    value=" ".join([role.mention for role in unsynced_roles]),
                 )
                 embed.set_footer(
                     text='Role sync times out after 5 minutes. Type "done" next time to save changes.'
