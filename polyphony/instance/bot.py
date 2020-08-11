@@ -69,7 +69,7 @@ class PolyphonyInstance(discord.Client):
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
         log.info(
-            f"Instance started as {self.user} ({self.pk_member_id}). Initializing..."
+            f"[START] Instance started as {self.user} ({self.pk_member_id}). Initializing..."
         )
 
         state = await self.check_for_invalid_states()
@@ -120,7 +120,9 @@ class PolyphonyInstance(discord.Client):
                 [self.user.id, self.pk_member_id],
             )
 
-        log.info(f"{self.user} ({self.pk_member_id}): Initialization complete")
+        log.info(
+            f"[COMPLETE] {self.user} ({self.pk_member_id}): Initialization complete"
+        )
 
         self.initialized = True
 
@@ -250,7 +252,7 @@ class PolyphonyInstance(discord.Client):
                             "UPDATE members SET member_enabled = 0 WHERE token = ?",
                             [instance.get_token()],
                         )
-                    del instances[i]
+                    instances.pop(i)
             return 1
 
         elif await self.check_if_not_in_guild():

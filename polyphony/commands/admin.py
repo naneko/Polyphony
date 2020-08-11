@@ -359,7 +359,7 @@ class Admin(commands.Cog):
                         "UPDATE members SET member_enabled = 0 WHERE token = ?",
                         [instance.get_token()],
                     )
-                del instances[i]
+                instances.pop(i)
                 await ctx.send(
                     f"{system_member.mention} suspended by {ctx.author.mention}"
                 )
