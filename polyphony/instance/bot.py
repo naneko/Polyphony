@@ -181,11 +181,18 @@ class PolyphonyInstance(discord.Client):
 
     async def push_nickname_updates(self):
         log.debug(f"{self.user} ({self.pk_member_id}): Updating nickname in guilds")
+
         for guild in self.guilds:
-            await guild.get_member(self.user.id).edit(nick=self.display_name)
-            log.debug(
-                f"{self.user} ({self.pk_member_id}): Updated nickname to {self.display_name} on guild {guild.name}"
-            )
+            try:
+                await guild.get_member(self.user.id).edit(nick=self.display_name)
+                log.debug(
+                    f"{self.user} ({self.pk_member_id}): Updated nickname to {self.display_name} on guild {guild.name}"
+                )
+            except AttributeError:
+                log.debug(
+                    f"{self.user} ({self.pk_member_id}): Failed to update nickname to {self.display_name} on guild {guild.name}"
+                )
+                pass
 
     async def sync(self, ctx=None) -> int:
         """
@@ -231,6 +238,7 @@ class PolyphonyInstance(discord.Client):
 
     async def check_for_invalid_states(self) -> int:
         log.debug(f"{self.user} ({self.pk_member_id}): Checking for invalid states...")
+        await self.wait_until_ready()
         if await self.check_if_main_account_left():
             log.warning(
                 f"{self.user} ({self.pk_member_id}): Main user left. Suspending self."
@@ -272,10 +280,9 @@ class PolyphonyInstance(discord.Client):
         log.debug(f"{self.user} ({self.pk_member_id}): Checking for account left...")
         from polyphony.bot import bot
 
-        if (
-            bot.get_user(self.main_user_account_id)
-            not in bot.get_guild(GUILD_ID).members
-        ):
+        if self.main_user_account_id not in [
+            member.id for member in bot.get_guild(GUILD_ID).members
+        ]:
             log.debug(f"{self.user} ({self.pk_member_id}): Main account left")
             return True
         return False
