@@ -21,7 +21,11 @@ schema_version = 1
 
 def init_db():
     """Initialize database tables migrations directory schema"""
-    version = conn.execute("SELECT * FROM meta").fetchone()["version"]
+    version = conn.execute("SELECT * FROM meta").fetchone()
+    if version is not None:
+        version = version["version"]
+    else:
+        version = 0
     if version > schema_version:
         log.error(
             f"Database version {version} is newer than version {schema_version} supported by this version of Polyphony. Polyphony does not support downgrading database versions. Please update Polyphony."
