@@ -41,3 +41,7 @@ CREATE TABLE IF NOT EXISTS roles (
     role_id             TEXT    PRIMARY KEY,
     id                  INT     NOT NULL -- Determines order in list
 );
+
+-- Set Database Version
+DELETE FROM meta;
+INSERT INTO meta VALUES (0);

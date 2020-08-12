@@ -1,0 +1,9 @@
+-- Schema Version 1
+
+-- Add Nickname Column
+ALTER TABLE members
+    ADD nickname    TEXT;
+
+-- Set Database Version
+DELETE FROM meta;
+INSERT INTO meta VALUES (1);

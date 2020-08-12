@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from .helpers.checks import is_mod
-from .helpers.database import init_db, get_enabled_members
+from .helpers.database import init_db, conn
 from .helpers.instances import create_member_instance, instances
 from .helpers.message_cache import recently_proxied_messages
 from .settings import (
@@ -42,7 +42,7 @@ init_db()
 
 # Start member instances
 log.debug("Initializing member instances...")
-members = get_enabled_members()
+members = conn.execute("SELECT * FROM members WHERE member_enabled == 1").fetchall()
 if len(members) == 0:
     log.info("No members found")
 for member in members:

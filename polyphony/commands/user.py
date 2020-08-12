@@ -11,7 +11,7 @@ import discord
 from discord.ext import commands
 
 from polyphony.helpers.checks import is_polyphony_user, is_mod
-from polyphony.helpers.database import c
+from polyphony.helpers.database import c, conn
 from polyphony.helpers.instances import instances
 from polyphony.helpers.log_message import LogMessage
 from polyphony.settings import (
@@ -70,7 +70,7 @@ class User(commands.Cog):
     async def user(self, ctx: commands.context):
         embed = discord.Embed(
             title="Polyphony User Help",
-            description="Polyphony uses your prefix and suffix from PluralKit. Unlike PluralKit,"
+            description="Polyphony uses your prefix and suffix from PluralKit. Unlike PluralKit, "
             "system members can be pinged directly. That ping will automatically be"
             "forwarded to the main account.",
             inline=False,
@@ -96,6 +96,12 @@ class User(commands.Cog):
             value="**Syncs information from PluralKit for all members**\n"
             "`;;sync member (member mention)` will sync changes for one specific member\n"
             "*Tip: Setting a display name in PluralKit will set a nickname that is different from the bot username*",
+            inline=False,
+        )
+        embed.add_field(
+            name=":id: `;;nick <member> (nickname)`",
+            value="**Set the nickname of a system member.**\n"
+            "If you want to reset it to the name you have defined in PluralKit, just leave the `nickname` parameter empty",
             inline=False,
         )
         embed.add_field(
@@ -132,12 +138,81 @@ class User(commands.Cog):
     @help.command()
     @is_mod()
     async def admin(self, ctx: commands.context):
-        await ctx.channel.send(
-            "Ask Kiera for now. She is going to add this help menu soon."
+        embed = discord.Embed(title="Polyphony Admin Help", inline=False,)
+        embed.add_field(
+            name=":hamburger: `;;list`",
+            value="`;;list` lists all enabled members\n"
+            "`;;list all` lists all members registered with Polyphony\n"
+            "`;;list system <system owner>` lists all members in a system\n"
+            "`;;list suspended` lists all suspended members",
+            inline=False,
         )
+        embed.add_field(
+            name=":scroll: `;;register <PluralKit member ID> <Main Account>`",
+            value="Ask members to give you the 5-letter PluralKit member IDs that are listed with pk;list (not system ID!)\n"
+            "The `Main Account` is **__NOT__** a bot account. It is the Discord user.\n"
+            "*You will be prompted with a confirmation dialog before the member is added. This will give you a chance to check for mistakes.*",
+            inline=False,
+        )
+        embed.add_field(
+            name=":inbox_tray: `;;syncall`",
+            value="**Syncs information from PluralKit for all members**\n"
+            "`;;syncall system <main account>` will sync the users for a specific system\n"
+            "`;;syncall member <system member>` will sync a specific system member"
+            "*Will also check for system members belonging to main accounts who have left the server and automatically suspend them*",
+            inline=False,
+        )
+        embed.add_field(
+            name=":mailbox_with_mail: `;;invite <client id/user id/user mention>`",
+            value="Creates an invite link for the instance bot ~~(or any other bot)~~",
+            inline=False,
+        )
+        embed.add_field(
+            name=":red_circle: `;;suspend <Polyphony member user>`",
+            value="Suspends a member instance, sending it offline.\n"
+            "*Can help save on resources.*",
+            inline=False,
+        )
+        embed.add_field(
+            name=":green_circle: `;;start <Polyphony member user>`",
+            value="Starts a member instance if it's suspended, bringing it online.",
+            inline=False,
+        )
+        embed.add_field(
+            name=":no_entry_sign: `;;disable <Polyphony member user>`",
+            value="**Permanently disables a member instance**\n"
+            "This will delete the instance from the Polyphony system. Because message history is not removed, bot users (tokens) cannot be reused after being disabled.\n"
+            "*If you do want to reuse a bot for some reason, reset the token in the Discord developer portal and add it with `;;tokens`*\n"
+            "*Due to the destructive nature of this command, a confirmation dialog with me shown before disabling to check for mistakes*",
+            inline=False,
+        )
+        embed.add_field(
+            name=":floppy_disk: `;;tokens`",
+            value="**Make sure DMs are __ON__ for the server**\n"
+            "Run on the server. You will receive further instructions in a DM.\n"
+            "__Never paste tokens into the server__",
+            inline=False,
+        )
+        embed.add_field(
+            name=":grey_question: `;;whois <Polyphony member user>`",
+            value="Get information about any Polyphony member user"
+            "\n*This command can be used by anyone*",
+            inline=False,
+        )
+        embed.add_field(
+            name=":mag: `;;slots`",
+            value="Show the number of free slots available for new members to be registered with Polyphony",
+            inline=False,
+        )
+        embed.add_field(
+            name=":stopwatch: `;;ping`",
+            value="Check if Polyphony, and hence Polyphony member users, is online and functioning",
+            inline=False,
+        )
+        await ctx.channel.send(embed=embed)
 
     @commands.command()
-    @is_polyphony_user()
+    @commands.check_any(is_mod(), is_polyphony_user(), commands.is_owner())
     # @commands.cooldown(1, 10)
     async def slots(self, ctx: commands.context):
         """
@@ -278,6 +353,42 @@ class User(commands.Cog):
             url=self.bot.get_user(member["member_Account_id"]).avatar_url
         )
         await ctx.channel.send(embed=embed)
+
+    @commands.command()
+    @is_polyphony_user()
+    async def nick(
+        self, ctx: commands.context, member: discord.Member, *, nickname: str = None
+    ):
+        if (
+            conn.execute(
+                "SELECT * FROM members WHERE discord_account_id == ? AND member_account_id == ?",
+                [ctx.author.id, member.id],
+            ).fetchone()
+            is not None
+        ):
+            if len(nickname or "") > 32:
+                embed = discord.Embed(
+                    title=f"**Could not update nickname**\n",
+                    description=f"Nickname `{(nickname[:42] + '...') if len(nickname or '') > 42 else nickname}` is too long",
+                    color=discord.Color.red(),
+                )
+                embed.set_author(name=member.display_name, icon_url=member.avatar_url)
+                embed.set_footer(text="Nicknames must be 32 characters or less")
+                await ctx.channel.send(embed=embed)
+                return
+            for instance in instances:
+                if instance.user.id == member.id:
+                    instance.nickname = nickname
+                    await instance.push_nickname_updates()
+                    embed = discord.Embed(
+                        description=f"Nickname updated for {member.mention}",
+                        color=discord.Color.green(),
+                    )
+                    embed.set_author(
+                        name=member.display_name, icon_url=member.avatar_url
+                    )
+                    await ctx.channel.send(embed=embed)
+                    break
 
     @commands.command()
     @commands.check_any(is_mod(), is_polyphony_user(), commands.is_owner())

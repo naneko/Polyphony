@@ -7,7 +7,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from polyphony.helpers.database import get_user
+from polyphony.helpers.database import conn
 from polyphony.settings import MODERATOR_ROLES
 
 log = logging.getLogger(__name__)
@@ -35,7 +35,9 @@ def is_polyphony_user():
     """
     # TODO: Add error message that self deletes
     async def predicate(ctx: commands.context):
-        user = get_user(ctx.author.id)
+        user = conn.execute(
+            "SELECT * FROM users WHERE discord_account_id = ?", [ctx.author.id]
+        ).fetchone()
         if user is not None:
             return True
         else:

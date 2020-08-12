@@ -29,6 +29,7 @@ def create_member_instance(member: sqlite3.Row) -> PolyphonyInstance:
         member["display_name"],
         member["pk_avatar_url"],
         member["pk_proxy_tags"],
+        member["nickname"],
     )
     loop = asyncio.get_event_loop()
     loop.create_task(new_instance.start(member["token"]))

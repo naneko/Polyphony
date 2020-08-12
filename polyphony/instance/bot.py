@@ -38,6 +38,7 @@ class PolyphonyInstance(discord.Client):
         display_name: str,
         pk_avatar_url: str,
         pk_proxy_tags: bytes,
+        nickname: str,
         **options,
     ):
         """
@@ -62,18 +63,21 @@ class PolyphonyInstance(discord.Client):
         self.__display_name: str = display_name
         self.__pk_avatar_url: str = pk_avatar_url
         self.__pk_proxy_tags = json.loads(pk_proxy_tags)
+        self.nickname: str = nickname
 
         # Prevent message processing until ready
         self.initialized = False
 
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
-        log.info(
+        log.debug(
             f"[READY] {self.user} ({self.pk_member_id}). Instance ready. Initializing..."
         )
 
-        self.pk_proxy_tags = self.__pk_proxy_tags
+        self.member_name = self.__member_name
+        self.display_name = self.__display_name
         self.pk_avatar_url = self.__pk_avatar_url
+        self.pk_proxy_tags = self.__pk_proxy_tags
 
         # TODO: Fix
         # state = await self.check_for_invalid_states()
@@ -171,13 +175,15 @@ class PolyphonyInstance(discord.Client):
 
         for guild in self.guilds:
             try:
-                await guild.get_member(self.user.id).edit(nick=self.display_name)
+                await guild.get_member(self.user.id).edit(
+                    nick=self.nickname or self.display_name
+                )
                 log.debug(
-                    f"{self.user} ({self.pk_member_id}): Updated nickname to {self.display_name} on guild {guild.name}"
+                    f"{self.user} ({self.pk_member_id}): Updated nickname to {self.nickname or self.display_name} on guild {guild.name}"
                 )
             except AttributeError:
                 log.debug(
-                    f"{self.user} ({self.pk_member_id}): Failed to update nickname to {self.display_name} on guild {guild.name}"
+                    f"{self.user} ({self.pk_member_id}): Failed to update nickname to {self.nickname or self.display_name} on guild {guild.name}"
                 )
                 pass
 
@@ -308,6 +314,10 @@ class PolyphonyInstance(discord.Client):
         else:
             return {"prefix": "no_prefix", "suffix": "no_suffix"}
 
+    @property
+    def nickname(self) -> str:
+        return self._nickname
+
     @member_name.setter
     def member_name(self, value: str):
         log.debug(f"{self.user} ({self.pk_member_id}): Username updating to p.{value}")
@@ -360,6 +370,15 @@ class PolyphonyInstance(discord.Client):
                 "UPDATE members SET pk_proxy_tags = ? WHERE token = ?",
                 [json.dumps(value), self._token],
             )
+
+    @nickname.setter
+    def nickname(self, value: str):
+        self._nickname = value
+        log.debug(f"{self.user} ({self.pk_member_id}): Updating nickname to {value}")
+        conn.execute(
+            "UPDATE members SET nickname = ? WHERE token = ?", [value, self._token]
+        )
+        conn.commit()
 
     def get_token(self):
         return self._token
@@ -460,7 +479,9 @@ class PolyphonyInstance(discord.Client):
 
     async def on_guild_join(self, guild: discord.Guild):
         # Update Nickname on guild join
-        await guild.get_member(self.user.id).edit(nick=self.display_name)
+        await guild.get_member(self.user.id).edit(
+            nick=self.nickname or self.display_name
+        )
 
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member):
         # Message deletes are handled by main bot to avoid permissions issues

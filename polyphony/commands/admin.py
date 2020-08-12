@@ -14,15 +14,7 @@ from disputils import BotConfirmation
 from polyphony.helpers.checks import is_mod, check_token
 from polyphony.helpers.database import (
     insert_member,
-    get_unused_tokens,
-    update_token_as_used,
-    get_member,
-    insert_user,
-    get_user,
-    get_token,
-    insert_token,
     c,
-    get_member_by_discord_id,
     conn,
 )
 from polyphony.helpers.instances import instances, create_member_instance
@@ -147,11 +139,11 @@ class Admin(commands.Cog):
 
             # Member exists
             if member is not None:
-                system_names = [f"{member['name']} (`{member['id']}`)"]
+                system_name = f"{member['name']} (`{member['id']}`)"
                 await logger.log(
                     f"Fetched member -> {member['name']} (`{member['id']}`)"
                 )
-                tokens = get_unused_tokens()
+                tokens = conn.execute("SELECT * FROM tokens WHERE used == 0").fetchall()
 
                 # Fail: No Slots Available
                 if len(tokens) == 0:
@@ -165,31 +157,46 @@ class Admin(commands.Cog):
                 # Confirm add
                 confirmation = BotConfirmation(ctx, discord.Color.blue())
                 await confirmation.confirm(
-                    f"Create member for {account} with member {', '.join(system_names)}?"
+                    f"Create member for {account} with member {system_name}?"
                 )
                 if confirmation.confirmed:
                     await confirmation.message.delete()
                     await logger.log("Adding to database...")
                 else:
                     await confirmation.message.delete()
-                    logger.title = "Extend Cancelled"
+                    logger.title = "Registration Cancelled"
                     logger.color = discord.Color.red()
                     await logger.log("Registration cancelled by user")
                     return
 
                 # Get a token and update as used
                 bot_token = tokens[0]
-                update_token_as_used(bot_token["token"])
+                conn.execute(
+                    "UPDATE tokens SET used = 1 WHERE token = ?", [bot_token["token"]]
+                )
+                conn.commit()
 
                 # Insert new user into users database
-                if get_user(account.id) is None:
+                if (
+                    conn.execute(
+                        "SELECT * FROM users WHERE discord_account_id = ?", [account.id]
+                    ).fetchone()
+                    is None
+                ):
                     await logger.log(
                         f"{account.mention} is a new user! Registering them with Polyphony"
                     )
-                    insert_user(account.id)
+                    conn.execute("INSERT INTO users VALUES(?)", [account.id])
+                    conn.commit()
 
                 # Insert member unless already registered
-                if get_member(pluralkit_member_id) is None:
+                if (
+                    conn.execute(
+                        "SELECT * FROM members WHERE pk_member_id == ?",
+                        [pluralkit_member_id],
+                    ).fetchone()
+                    is None
+                ):
                     insert_member(
                         bot_token["token"],
                         member["id"],
@@ -198,7 +205,7 @@ class Admin(commands.Cog):
                         member["name"],
                         member["display_name"],
                         member["avatar_url"],
-                        member["proxy_tags"][0],
+                        member["proxy_tags"],
                         member["keep_proxy"],
                         member_enabled=True,
                     )
@@ -212,7 +219,11 @@ class Admin(commands.Cog):
                     )
                     return
                 await logger.log("Creating member instance...")
-                instance = create_member_instance(get_member(member["id"]))
+                instance = create_member_instance(
+                    conn.execute(
+                        "SELECT * FROM members WHERE pk_member_id == ?", [member["id"]]
+                    ).fetchone()
+                )
                 await logger.log("Syncing member instance...")
                 await instance.sync()
 
@@ -226,8 +237,8 @@ class Admin(commands.Cog):
         # Success State
         logger.title = f"Registration of {member['name']} Successful"
         logger.color = discord.Color.green()
-        c.execute("SELECT * FROM tokens WHERE used = 0")
-        slots = c.fetchall()
+
+        slots = conn.execute("SELECT * FROM tokens WHERE used = 0").fetchall()
         await logger.log(f"There are now {len(slots)} slots available")
         await logger.log(f"\nUser is {instance.user.mention}")
         log.info("New member instance registered and activated")
@@ -325,7 +336,7 @@ class Admin(commands.Cog):
 
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
-    async def invite(self, ctx: commands.context, client_id: str):
+    async def invite(self, ctx: commands.context, member: discord.Member):
         """
         Generates an invite link with pre-set permissions from a client ID.
 
@@ -336,12 +347,12 @@ class Admin(commands.Cog):
         embed = discord.Embed(
             title=f"Invite Link for {ctx.guild.name}",
             url=discord.utils.oauth_url(
-                client_id,
+                member.id,
                 permissions=discord.Permissions(DEFAULT_INSTANCE_PERMS),
                 guild=ctx.guild,
             ),
         )
-        embed.set_footer(text=f"Client ID: {client_id}")
+        embed.set_footer(text=f"Client ID: {member.id}")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -380,7 +391,9 @@ class Admin(commands.Cog):
         """
         # TODO: Provide more verbose feedback from command
         await ctx.message.delete()
-        member = get_member_by_discord_id(system_member.id)
+        member = conn.execute(
+            "SELECT * FROM members WHERE member_account_id = ?", [system_member.id]
+        ).fetchone()
         if member is not None:
             if not member["member_enabled"]:
                 c.execute(
@@ -407,7 +420,9 @@ class Admin(commands.Cog):
         :param system_member: System Member
         """
         # TODO: Provide more verbose feedback from command
-        instance = get_member_by_discord_id(system_member.id)
+        instance = conn.execute(
+            "SELECT * FROM members WHERE member_account_id = ?", [system_member.id]
+        ).fetchone()
         if instance:
             log.debug(f"Disabling {system_member}")
             confirmation = BotConfirmation(ctx, discord.Color.red())
@@ -463,9 +478,15 @@ class Admin(commands.Cog):
                     await logger.log("Bot token is invalid")
                 else:
                     await logger.log("Token valid")
-                    if get_token(token) is None:
+                    if (
+                        conn.execute(
+                            "SELECT * FROM tokens WHERE token = ?", [token]
+                        ).fetchone()
+                        is None
+                    ):
                         log.info("Adding new token to database")
-                        insert_token(token, False)
+                        conn.execute("INSERT INTO tokens VALUES(?, ?)", [token, False])
+                        conn.commit()
                         logger.title = f"Bot token #{index+1} added"
                         logger.color = discord.Color.green()
                         c.execute("SELECT * FROM tokens WHERE used = 0")
