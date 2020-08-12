@@ -33,28 +33,30 @@ init_extensions = ["commands.admin", "commands.user"]
 # TODO: Allow setting nickname override that isn't display_name
 # TODO: Autoproxy (sync up typing status if possible)
 
+log.info("Polyphony is starting...")
+
+log.info("Starting member initialization...")
+
+# Initialize Database
+init_db()
+
+# Start member instances
+log.debug("Initializing member instances...")
+members = get_enabled_members()
+if len(members) == 0:
+    log.info("No members found")
+for member in members:
+    create_member_instance(member)
+
+log.info(f"Member initialization complete.")
+
 
 @bot.event
 async def on_ready():
     """
     Execute on bot initialization with the Discord API.
     """
-
-    log.info("Polyphony is starting...")
-
-    # Initialize Database
-    init_db()
-
-    # Start member instances
-    log.debug("Initializing member instances...")
-    members = get_enabled_members()
-    if len(members) == 0:
-        log.info("No members found")
-    for member in members:
-        create_member_instance(member)
-    log.debug(f"Member initialization complete.")
-
-    log.info(f"Polyphony started as {bot.user}")
+    log.info(f"Polyphony ready. Started as {bot.user}.")
 
 
 # Load extensions

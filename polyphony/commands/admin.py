@@ -213,6 +213,8 @@ class Admin(commands.Cog):
                     return
                 await logger.log("Creating member instance...")
                 instance = create_member_instance(get_member(member["id"]))
+                await logger.log("Syncing member instance...")
+                await instance.sync()
 
             # Fail: Invalid ID
             else:
@@ -228,7 +230,7 @@ class Admin(commands.Cog):
         slots = c.fetchall()
         await logger.log(f"There are now {len(slots)} slots available")
         await logger.log(f"\nUser is {instance.user.mention}")
-        log.info("New member instance extended and activated")
+        log.info("New member instance registered and activated")
 
     @commands.group()
     @commands.check_any(commands.is_owner(), is_mod())
@@ -239,7 +241,7 @@ class Admin(commands.Cog):
         logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
         logger.color = discord.Color.orange()
 
-        for instance in instances:
+        for i, instance in enumerate(instances):
             if len(logger.content) > 30:
                 logger.title = ":white_check_mark: Batch Complete"
                 logger.color = discord.Color.green()
@@ -248,7 +250,9 @@ class Admin(commands.Cog):
                     ctx, title=":hourglass: Syncing Next Batch of Members..."
                 )
                 logger.color = discord.Color.orange()
-            await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+            await logger.log(
+                f":hourglass: Syncing {instance.user.mention}... ({i}/{len(instances)})"
+            )
             sync_state = instance.sync()
             if await sync_state == 0:
                 logger.content[
@@ -383,11 +387,13 @@ class Admin(commands.Cog):
                     "UPDATE members SET member_enabled = 1 WHERE member_account_id = ?",
                     [system_member.id],
                 )
-                instances.append(create_member_instance(member))
+                instance = create_member_instance(member)
+                instances.append(instance)
                 await ctx.send(
                     f"{system_member.mention} started by {ctx.message.author.mention}"
                 )
                 log.info(f"{system_member} has been started by {ctx.message.author}")
+                await instance.sync()
             else:
                 await ctx.send(f"{system_member.mention} is already running")
 
@@ -414,7 +420,7 @@ class Admin(commands.Cog):
                     )
                 await self.suspend(ctx, system_member)
                 await ctx.send(
-                    f"{system_member.mention} disabled permanently by {ctx.message.author}"
+                    f"{system_member.mention} disabled permanently by {ctx.message.author.mention}"
                 )
                 log.info(
                     f"{system_member} has been disabled permanently by {ctx.message.author}"

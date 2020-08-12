@@ -69,46 +69,20 @@ class PolyphonyInstance(discord.Client):
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
         log.info(
-            f"[START] Instance started as {self.user} ({self.pk_member_id}). Initializing..."
+            f"[READY] {self.user} ({self.pk_member_id}). Instance ready. Initializing..."
         )
 
-        state = await self.check_for_invalid_states()
-        if state == 1:
-            log.warning(
-                f"Failed to start {self.user} ({self.pk_member_id}) because main user left. Instance has been suspended."
-            )
-            await self.close()
-            return
-
-        # Update Member Name
-        self.member_name: str = self.__member_name
-        if self.__display_name:
-            self.display_name: str = self.__display_name
-        else:
-            self.display_name: str = self.__member_name
-
-        # Update Username
-        await self.user.edit(username=self.member_name)
-
-        # Update Roles
-        await self.update_default_roles()
-
-        # Update Avatar
-        self.pk_avatar_url: str = self.__pk_avatar_url
-
-        # Update Proxy Tags
         self.pk_proxy_tags = self.__pk_proxy_tags
+        self.pk_avatar_url = self.__pk_avatar_url
 
-        # Update Nickname in Guilds
-        await self.push_nickname_updates()
-
-        # Update Presence
-        await self.change_presence(
-            activity=discord.Activity(
-                name=f"{self.get_user(self.main_user_account_id)}",
-                type=discord.ActivityType.listening,
-            )
-        )
+        # TODO: Fix
+        # state = await self.check_for_invalid_states()
+        # if state == 1:
+        #     log.warning(
+        #         f"Failed to start {self.user} ({self.pk_member_id}) because main user left. Instance has been suspended."
+        #     )
+        #     await self.close()
+        #     return
 
         # Update Self ID in Database
         with conn:
@@ -120,8 +94,21 @@ class PolyphonyInstance(discord.Client):
                 [self.user.id, self.pk_member_id],
             )
 
+        from polyphony.bot import bot
+
+        # Update Presence
+        log.debug(
+            f'{self.user} ({self.pk_member_id}): Updating presence to "Listening to {bot.get_user(self.main_user_account_id)}"'
+        )
+        await self.change_presence(
+            activity=discord.Activity(
+                name=f"{bot.get_user(self.main_user_account_id)}",
+                type=discord.ActivityType.listening,
+            )
+        )
+
         log.info(
-            f"[COMPLETE] {self.user} ({self.pk_member_id}): Initialization complete"
+            f"[INITIALIZED] {self.user} ({self.pk_member_id}): Initialization complete"
         )
 
         self.initialized = True
@@ -206,8 +193,12 @@ class PolyphonyInstance(discord.Client):
         """
         log.info(f"{self.user} ({self.pk_member_id}) is syncing")
 
+        await self.wait_until_ready()
+
         # Get PluralKit Member
         member = await pk_get_member(self.pk_member_id)
+
+        await self.update_default_roles()
 
         # Detect Failure
         if member is None:
@@ -252,6 +243,7 @@ class PolyphonyInstance(discord.Client):
             await send_to_log_channel(embed=embed)
             from polyphony.helpers.instances import instances
 
+            # TODO: Change instance array to be dict instead to allow direct access instead of iterative access
             for i, instance in enumerate(instances):
                 if instance.user.id == self.user.id:
                     await instance.close()
