@@ -29,13 +29,13 @@ def init_db():
         exit()
     for v in range(0, schema_version + 1):
         if version < v:
-            log.debug(f"Updating database to schema version {v}")
+            log.info(f"Updating database to schema version {v}")
             with open(
                 f"{pathlib.Path().absolute()}/migrations/v{v}.sqlite", "r"
             ) as schema_file:
                 schema = schema_file.read()
             conn.executescript(schema)
-    log.debug("Database initialized")
+    log.info(f"Database initialized (Version {schema_version})")
 
 
 def insert_member(
