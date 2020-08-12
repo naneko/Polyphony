@@ -35,6 +35,7 @@ def init_db():
             ) as schema_file:
                 schema = schema_file.read()
             conn.executescript(schema)
+    conn.commit()
     log.info(f"Database initialized (Version {schema_version})")
 
 
