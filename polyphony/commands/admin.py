@@ -45,7 +45,7 @@ class Admin(commands.Cog):
         self.token_session = []
 
     @commands.group()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def list(self, ctx: commands.context):
         """
         list: Shows all active Polyphony members sorted by main account
@@ -62,7 +62,7 @@ class Admin(commands.Cog):
         await self.send_member_list(ctx, embed, member_list)
 
     @list.command()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def all(self, ctx: commands.context):
         log.debug("Listing all members...")
         c.execute("SELECT * FROM members")
@@ -71,7 +71,7 @@ class Admin(commands.Cog):
         await self.send_member_list(ctx, embed, member_list)
 
     @list.command()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def system(self, ctx: commands.context, member: discord.Member):
         log.debug(f"Listing members for {member.display_name}...")
         c.execute(
@@ -83,7 +83,7 @@ class Admin(commands.Cog):
         await self.send_member_list(ctx, embed, member_list)
 
     @list.command()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def suspended(self, ctx: commands.context):
         log.debug("Listing suspended members...")
         c.execute("SELECT * FROM members WHERE member_enabled == 0")
@@ -122,7 +122,7 @@ class Admin(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def register(
         self, ctx: commands.context, pluralkit_member_id: str, account: discord.Member,
     ):
@@ -231,7 +231,7 @@ class Admin(commands.Cog):
         log.info("New member instance extended and activated")
 
     @commands.group()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def syncall(self, ctx: commands.context):
         if ctx.invoked_subcommand is not None:
             return
@@ -268,7 +268,7 @@ class Admin(commands.Cog):
         log.info("Sync all complete")
 
     @syncall.command()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def system(self, ctx: commands.context, main_user: discord.User):
         """
         Sync system members with PluralKit
@@ -295,7 +295,7 @@ class Admin(commands.Cog):
         await logger.update()
 
     @syncall.command()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def member(self, ctx: commands.context, system_member: discord.User):
         """
         Sync system member with PluralKit
@@ -320,7 +320,7 @@ class Admin(commands.Cog):
         await logger.update()
 
     @commands.command()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def invite(self, ctx: commands.context, client_id: str):
         """
         Generates an invite link with pre-set permissions from a client ID.
@@ -341,7 +341,7 @@ class Admin(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def suspend(self, ctx: commands.context, system_member: discord.Member):
         """
         Pulls the member instance offline.
@@ -366,7 +366,7 @@ class Admin(commands.Cog):
                 log.info(f"{system_member} has been suspended by {ctx.message.author}")
 
     @commands.command()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def start(self, ctx: commands.context, system_member: discord.Member):
         """
         Starts a suspended instance
@@ -392,7 +392,7 @@ class Admin(commands.Cog):
                 await ctx.send(f"{system_member.mention} is already running")
 
     @commands.command()
-    @is_mod()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def disable(self, ctx: commands.context, system_member: discord.Member):
         """
         Disables a system member permanently by deleting it from the database and kicking it from the server. Bot token cannot be reused.

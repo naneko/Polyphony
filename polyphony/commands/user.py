@@ -31,7 +31,7 @@ class User(commands.Cog):
         self.bot = bot
 
     @commands.group()
-    @is_polyphony_user(allow_mods=True)
+    @commands.check_any(is_mod(), is_polyphony_user(), commands.is_owner())
     async def help(self, ctx: commands.context):
         if ctx.invoked_subcommand is None:
             embed = discord.Embed(
@@ -280,7 +280,7 @@ class User(commands.Cog):
         await ctx.channel.send(embed=embed)
 
     @commands.command()
-    @is_polyphony_user(allow_mods=True)
+    @commands.check_any(is_mod(), is_polyphony_user(), commands.is_owner())
     async def ping(self, ctx: commands.context):
         """
         ping: Pings the core bot
