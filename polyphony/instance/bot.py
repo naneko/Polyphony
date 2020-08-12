@@ -75,7 +75,7 @@ class PolyphonyInstance(discord.Client):
         state = await self.check_for_invalid_states()
         if state == 1:
             log.warning(
-                f"Failed to start {self.user} (`{self.pk_member_id}`) because main user left. Instance has been suspended."
+                f"Failed to start {self.user} ({self.pk_member_id}) because main user left. Instance has been suspended."
             )
             await self.close()
             return
@@ -229,8 +229,8 @@ class PolyphonyInstance(discord.Client):
         # Update display name (remove p. in member_name if using member_name)
         self.display_name: str = member.get("display_name") or self.member_name[2:]
 
-        self.pk_avatar_url = member.get("avatar_url")
-        self.pk_proxy_tags = member.get("proxy_tags")
+        self.pk_avatar_url = member.get("avatar_url") or self.pk_avatar_url
+        self.pk_proxy_tags = member.get("proxy_tags") or self.pk_proxy_tags
 
         await self.update(ctx)
         log.info(f"{self.user} ({self.pk_member_id}): Sync complete")
@@ -280,9 +280,7 @@ class PolyphonyInstance(discord.Client):
         log.debug(f"{self.user} ({self.pk_member_id}): Checking for account left...")
         from polyphony.bot import bot
 
-        if self.main_user_account_id not in [
-            member.id for member in bot.get_guild(GUILD_ID).members
-        ]:
+        if bot.get_guild(GUILD_ID).get_member(self.main_user_account_id) is None:
             log.debug(f"{self.user} ({self.pk_member_id}): Main account left")
             return True
         return False

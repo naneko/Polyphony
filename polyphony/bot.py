@@ -40,6 +40,8 @@ async def on_ready():
     Execute on bot initialization with the Discord API.
     """
 
+    log.info("Polyphony is starting...")
+
     # Initialize Database
     init_db()
 
@@ -47,7 +49,7 @@ async def on_ready():
     log.debug("Initializing member instances...")
     members = get_enabled_members()
     if len(members) == 0:
-        log.debug("No members found")
+        log.info("No members found")
     for member in members:
         create_member_instance(member)
     log.debug(f"Member initialization complete.")
