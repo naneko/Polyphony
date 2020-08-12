@@ -41,14 +41,14 @@ log.info("Starting member initialization...")
 init_db()
 
 # Start member instances
-log.debug("Initializing member instances...")
+log.debug("Creating member instances...")
 members = conn.execute("SELECT * FROM members WHERE member_enabled == 1").fetchall()
 if len(members) == 0:
     log.info("No members found")
 for member in members:
     create_member_instance(member)
 
-log.info(f"Member initialization complete.")
+log.info(f"Member instances created.")
 
 
 @bot.event

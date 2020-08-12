@@ -54,30 +54,26 @@ class PolyphonyInstance(discord.Client):
         :param options:
         """
         super().__init__(**options)
+
+        # Prevent message processing until ready
+        self.initialized = False
+
         self.pk_member_id: str = pk_member_id
         self.main_user_account_id: int = discord_account_id
         self._token: str = token
 
         # Temporary for Initialization. Will be sent to API in on_ready().
-        self.__member_name: str = member_name
-        self.__display_name: str = display_name
-        self.__pk_avatar_url: str = pk_avatar_url
-        self.__pk_proxy_tags = json.loads(pk_proxy_tags)
+        self.member_name: str = member_name
+        self.display_name: str = display_name
+        self.pk_avatar_url: str = pk_avatar_url
+        self.pk_proxy_tags = json.loads(pk_proxy_tags)
         self.nickname: str = nickname
-
-        # Prevent message processing until ready
-        self.initialized = False
 
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
         log.debug(
             f"[READY] {self.user} ({self.pk_member_id}). Instance ready. Initializing..."
         )
-
-        self.member_name = self.__member_name
-        self.display_name = self.__display_name
-        self.pk_avatar_url = self.__pk_avatar_url
-        self.pk_proxy_tags = self.__pk_proxy_tags
 
         # TODO: Fix
         # state = await self.check_for_invalid_states()
@@ -98,11 +94,11 @@ class PolyphonyInstance(discord.Client):
                 [self.user.id, self.pk_member_id],
             )
 
+        # Update Presence
         from polyphony.bot import bot
 
-        # Update Presence
         log.debug(
-            f'{self.user} ({self.pk_member_id}): Updating presence to "Listening to {bot.get_user(self.main_user_account_id)}"'
+            f'{self.user} ({self.pk_member_id}): Setting presence to "Listening to {bot.get_user(self.main_user_account_id)}"'
         )
         await self.change_presence(
             activity=discord.Activity(
@@ -322,7 +318,8 @@ class PolyphonyInstance(discord.Client):
     def member_name(self, value: str):
         log.debug(f"{self.user} ({self.pk_member_id}): Username updating to p.{value}")
         self._member_name = f"p.{value}"
-        self.user.name = f"p.{value}"
+        if self.initialized:
+            self.user.name = f"p.{value}"
         with conn:
             log.debug(f"{self.user} ({self.pk_member_id}): Updating Member Name")
             c.execute(
