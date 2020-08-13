@@ -57,7 +57,7 @@ def insert_member(
 ):
     log.debug(f"Inserting member {member_name} ({pk_member_id}) into database...")
     conn.execute(
-        "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
             token,
             pk_member_id,
@@ -69,6 +69,7 @@ def insert_member(
             json.dumps(pk_proxy_tags),
             pk_keep_proxy,
             member_enabled,
+            None
         ],
     )
     conn.commit()
