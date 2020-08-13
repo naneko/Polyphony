@@ -69,11 +69,15 @@ class PolyphonyInstance(discord.Client):
         self.pk_proxy_tags = json.loads(pk_proxy_tags)
         self.nickname: str = nickname
 
+        self.main_user = None
+
+        log.debug(f"[INITIALIZED] {self.member_name} ({self.pk_member_id})")
+
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
-        log.debug(
-            f"[READY] {self.user} ({self.pk_member_id}). Instance ready. Initializing..."
-        )
+        log.debug(f"[STARTUP] {self.user} ({self.pk_member_id})")
+
+        self.initialized = True
 
         # TODO: Fix
         # state = await self.check_for_invalid_states()
@@ -95,23 +99,25 @@ class PolyphonyInstance(discord.Client):
             )
 
         # Update Presence
-        from polyphony.bot import bot
-
         log.debug(
-            f'{self.user} ({self.pk_member_id}): Setting presence to "Listening to {bot.get_user(self.main_user_account_id)}"'
+            f'{self.user} ({self.pk_member_id}): Setting presence initially to "Listening to ..."'
         )
         await self.change_presence(
-            activity=discord.Activity(
-                name=f"{bot.get_user(self.main_user_account_id)}",
-                type=discord.ActivityType.listening,
-            )
+            activity=discord.Activity(name=f"...", type=discord.ActivityType.listening,)
         )
 
-        log.info(
-            f"[INITIALIZED] {self.user} ({self.pk_member_id}): Initialization complete"
-        )
+        log.info(f"[READY] {self.user} ({self.pk_member_id})")
 
+    async def on_disconnect(self):
+        log.info(f"[DISCONNECTED] {self.user} ({self.pk_member_id})")
+        self.initialized = False
+
+    async def on_resumed(self):
+        log.info(f"[RESUMED] {self.user} ({self.pk_member_id})")
         self.initialized = True
+
+    async def on_error(self, event_method, *args, **kwargs):
+        log.error(f"{self.user} ({self.pk_member_id}): {event_method}")
 
     async def update(self, ctx=None):
         """
@@ -397,6 +403,20 @@ class PolyphonyInstance(discord.Client):
         if self.initialized is False:
             return
 
+        if self.main_user is None:
+            # Update Presence
+            # This is a fix for a problem where self.main_user was being set to None in on_ready()
+            self.main_user = self.get_user(self.main_user_account_id)
+            if self.main_user is not None:
+                log.debug(
+                    f'{self.user} ({self.pk_member_id}): Presence was set to None. Setting presence to "Listening to {self.main_user}"'
+                )
+                await self.change_presence(
+                    activity=discord.Activity(
+                        name=f"{self.main_user}", type=discord.ActivityType.listening,
+                    )
+                )
+
         start = time.time()
 
         prefix_used = None
@@ -419,7 +439,7 @@ class PolyphonyInstance(discord.Client):
             and message.author.id == self.main_user_account_id
         ):
             log.debug(
-                f'{self.user} ({self.pk_member_id}): Processing new message => "{message.content}" (attachments: {len(message.attachments)})'
+                f'{self.user} ({self.pk_member_id}): Processing new message in {message.channel} => "{message.content}" (attachments: {len(message.attachments)})'
             )
 
             # Remove prefix/suffix
@@ -430,11 +450,12 @@ class PolyphonyInstance(discord.Client):
             # Delete and send at same time to be as fast as possible
             from polyphony.bot import bot
 
+            # Trigger typing if uploading attachment
+            await message.channel.trigger_typing() if len(
+                message.attachments
+            ) > 0 else None
+
             await asyncio.gather(
-                # Trigger typing if uploading attachment
-                message.channel.trigger_typing()
-                if len(message.attachments) > 0
-                else asyncio.sleep(0),
                 # Delete Message. Without context, it's easier to call the low-level method in discord.http.
                 bot.http.delete_message(message.channel.id, message.id),
                 # Send new message

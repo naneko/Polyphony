@@ -136,7 +136,7 @@ class User(commands.Cog):
         await ctx.channel.send(embed=embed)
 
     @help.command()
-    @is_mod()
+    @commands.check_any(is_mod(), commands.is_owner())
     async def admin(self, ctx: commands.context):
         embed = discord.Embed(title="Polyphony Admin Help", inline=False,)
         embed.add_field(
@@ -183,7 +183,7 @@ class User(commands.Cog):
             value="**Permanently disables a member instance**\n"
             "This will delete the instance from the Polyphony system. Because message history is not removed, bot users (tokens) cannot be reused after being disabled.\n"
             "*If you do want to reuse a bot for some reason, reset the token in the Discord developer portal and add it with `;;tokens`*\n"
-            "*Due to the destructive nature of this command, a confirmation dialog with me shown before disabling to check for mistakes*",
+            "*Due to the destructive nature of this command, a confirmation dialog will be shown before disabling to check for mistakes*",
             inline=False,
         )
         embed.add_field(
