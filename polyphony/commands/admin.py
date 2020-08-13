@@ -169,12 +169,8 @@ class Admin(commands.Cog):
                     await logger.log("Registration cancelled by user")
                     return
 
-                # Get a token and update as used
+                # Get a token
                 bot_token = tokens[0]
-                conn.execute(
-                    "UPDATE tokens SET used = 1 WHERE token = ?", [bot_token["token"]]
-                )
-                conn.commit()
 
                 # Insert new user into users database
                 if (
@@ -209,6 +205,12 @@ class Admin(commands.Cog):
                         member["keep_proxy"],
                         member_enabled=True,
                     )
+
+                    # Mark token as used
+                    conn.execute(
+                        "UPDATE tokens SET used = 1 WHERE token = ?", [bot_token["token"]]
+                    )
+                    conn.commit()
 
                 # Fail: Member Already Registered
                 else:
