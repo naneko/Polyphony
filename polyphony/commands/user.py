@@ -377,18 +377,19 @@ class User(commands.Cog):
                 await ctx.channel.send(embed=embed)
                 return
             for instance in instances:
-                if instance.user.id == member.id:
-                    instance.nickname = nickname
-                    await instance.push_nickname_updates()
-                    embed = discord.Embed(
-                        description=f"Nickname updated for {member.mention}",
-                        color=discord.Color.green(),
-                    )
-                    embed.set_author(
-                        name=member.display_name, icon_url=member.avatar_url
-                    )
-                    await ctx.channel.send(embed=embed)
-                    break
+                if instance.is_ready():
+                    if instance.user.id == member.id:
+                        instance.nickname = nickname
+                        await instance.push_nickname_updates()
+                        embed = discord.Embed(
+                            description=f"Nickname updated for {member.mention}",
+                            color=discord.Color.green(),
+                        )
+                        embed.set_author(
+                            name=member.display_name, icon_url=member.avatar_url
+                        )
+                        await ctx.channel.send(embed=embed)
+                        break
 
     @commands.command()
     @commands.check_any(is_mod(), is_polyphony_user(), commands.is_owner())
