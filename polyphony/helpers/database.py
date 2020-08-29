@@ -69,7 +69,7 @@ def insert_member(
             json.dumps(pk_proxy_tags),
             pk_keep_proxy,
             member_enabled,
-            None
+            None,
         ],
     )
     conn.commit()

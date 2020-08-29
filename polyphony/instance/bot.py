@@ -1,22 +1,16 @@
 """
 Instances are individual bots that are created with the purpose.
 """
-import asyncio
 import json
 import logging
-import time
-from datetime import timedelta
 
 import discord
 import discord.ext
-import emoji
 
 from polyphony.helpers.database import conn, c
 from polyphony.helpers.log_to_channel import send_to_log_channel
-from polyphony.helpers.message_cache import new_proxied_message
 from polyphony.helpers.pluralkit import pk_get_member
 from polyphony.settings import (
-    COMMAND_PREFIX,
     DEFAULT_INSTANCE_PERMS,
     GUILD_ID,
     INSTANCE_ADD_ROLES,
@@ -69,12 +63,11 @@ class PolyphonyInstance(discord.Client):
         # Main User Account
         self.main_user = None
 
-        log.debug(f"{self.member_name} ({self.pk_member_id}) [INITIALIZED]")
+        log.debug(f"[INITIALIZED] {self.member_name} ({self.pk_member_id})")
 
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
-        log.debug(f"{self.user} ({self.pk_member_id}) [STARTUP]")
-
+        log.debug(f"[STARTUP]     {self.user} ({self.pk_member_id})")
         # TODO: Fix
         # state = await self.check_for_invalid_states()
         # if state == 1:
@@ -96,24 +89,22 @@ class PolyphonyInstance(discord.Client):
 
         self.main_user = self.get_user(self.main_user_account_id)
 
-        # Update Presence
-        log.debug(
-            f'{self.user} ({self.pk_member_id}): Setting presence initially to "Listening to ..."'
-        )
-        await self.change_presence(
-            activity=discord.Activity(name=f"...", type=discord.ActivityType.listening,)
-        )
-
-        log.info(f"[READY] {self.user} ({self.pk_member_id})")
+        log.info(f"[READY]        {self.user} ({self.pk_member_id})")
 
     async def on_disconnect(self):
-        log.info(f"{self.user} ({self.pk_member_id}) [DISCONNECTED]")
+        log.info(f"[DISCONNECTED] {self.user} ({self.pk_member_id})")
 
     async def on_resumed(self):
-        log.info(f"{self.user} ({self.pk_member_id}) [RESUMED]")
+        log.info(f"[RESUMED]      {self.user} ({self.pk_member_id})")
 
     async def on_error(self, event_method, *args, **kwargs):
         log.error(f"{self.user} ({self.pk_member_id}): {event_method}")
+
+    async def on_guild_join(self, guild: discord.Guild):
+        # Update Nickname on guild join
+        await guild.get_member(self.user.id).edit(
+            nick=self.nickname or self.display_name
+        )
 
     async def update(self, ctx=None):
         """
@@ -381,189 +372,3 @@ class PolyphonyInstance(discord.Client):
 
     def get_token(self):
         return self._token
-
-    async def on_member_update(self, before: discord.Member, after: discord.Member):
-        if self.main_user_account_id == after.id and before.status != after.status:
-            log.debug(
-                f"{self.user} ({self.pk_member_id}): Updating presence to {after.status}"
-            )
-            await self.change_presence(
-                status=after.status,
-                activity=discord.Activity(
-                    name=f"{self.get_user(self.main_user_account_id)}",
-                    type=discord.ActivityType.listening,
-                ),
-            )
-
-    async def on_message(self, message: discord.Message):
-        if self.is_ready() is False:
-            return
-
-        if self.main_user is None:
-            # Update Presence
-            # This is a fix for a problem where self.main_user was being set to None in on_ready()
-            self.main_user = self.get_user(self.main_user_account_id)
-            if self.main_user is not None:
-                log.debug(
-                    f'{self.user} ({self.pk_member_id}): Presence was set to None. Setting presence to "Listening to {self.main_user}"'
-                )
-                await self.change_presence(
-                    activity=discord.Activity(
-                        name=f"{self.main_user}", type=discord.ActivityType.listening,
-                    )
-                )
-
-        start = time.time()
-
-        prefix_used = None
-        suffix_used = None
-
-        # Check prefix/suffix and get value
-        for tag in self.pk_proxy_tags:
-            if message.content.startswith(
-                tag.get("prefix") or ""
-            ) and message.content.endswith(tag.get("suffix") or ""):
-                prefix_used = tag.get("prefix") or ""
-                suffix_used = tag.get("suffix") or ""
-                break
-
-        # Check message
-        if (
-            prefix_used is not None
-            and suffix_used is not None
-            and message.author is not self.user
-            and message.author.id == self.main_user_account_id
-        ):
-            log.debug(
-                f'{self.user} ({self.pk_member_id}): Processing new message in {message.channel} => "{message.content}" (attachments: {len(message.attachments)})'
-            )
-
-            # Remove prefix/suffix
-            msg = message.content[
-                len(prefix_used or "") or None : -len(suffix_used or "") or None
-            ]
-
-            # Delete and send at same time to be as fast as possible
-            from polyphony.bot import bot
-
-            # Trigger typing if uploading attachment
-            await message.channel.trigger_typing() if len(
-                message.attachments
-            ) > 0 else None
-
-            await asyncio.gather(
-                # Delete Message. Without context, it's easier to call the low-level method in discord.http.
-                bot.http.delete_message(message.channel.id, message.id),
-                # Send new message
-                message.channel.send(
-                    msg, files=[await file.to_file() for file in message.attachments],
-                ),
-            )
-
-            new_proxied_message(message)
-
-            end = time.time()
-            log.debug(
-                f"{self.user} ({self.pk_member_id}): Benchmark: {timedelta(seconds=end - start)} | Protocol Roundtrip: {timedelta(seconds=self.latency)}"
-            )
-
-        # Check for ping
-        elif (
-            self.user in message.mentions
-            and message.author.id != self.main_user_account_id
-            and message.author.id != self.user.id
-            and not message.content.startswith(COMMAND_PREFIX)
-        ):
-            # Forward Ping
-            log.debug(
-                f"Forwarding ping from {self.user} to {self.get_user(self.main_user_account_id)}"
-            )
-            from polyphony.bot import bot
-
-            embed = discord.Embed(
-                description=f"Originally to {self.user.mention}\n[Highlight Message]({message.jump_url})"
-            )
-            embed.set_author(
-                name=f"From {message.author}", icon_url=message.author.avatar_url,
-            )
-
-            await bot.get_channel(message.channel.id).send(
-                f"{self.get_user(self.main_user_account_id).mention}", embed=embed,
-            )
-
-    async def on_guild_join(self, guild: discord.Guild):
-        # Update Nickname on guild join
-        await guild.get_member(self.user.id).edit(
-            nick=self.nickname or self.display_name
-        )
-
-    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member):
-        # Message deletes are handled by main bot to avoid permissions issues
-
-        # Check for correct user
-        if reaction.message.author == self.user and user == self.get_user(
-            self.main_user_account_id
-        ):
-
-            # Delete React
-            if (
-                emoji.demojize(reaction.emoji) or ""
-            ) == ":cross_mark:":  # Discord name: x
-                from polyphony.bot import bot
-
-                await bot.http.delete_message(
-                    reaction.message.channel.id, reaction.message.id
-                ),
-
-            # Edit React
-            if (
-                emoji.demojize(reaction.emoji) or ""
-            ) == ":memo:":  # Discord name: pencil
-                from polyphony.bot import bot
-
-                embed = discord.Embed(
-                    description=f"You are now editing a [message]({reaction.message.jump_url})\nYour next message will replace it's contents.",
-                    color=discord.Color.orange(),
-                )
-                embed.set_footer(text='Type "cancel" to cancel edit')
-                instructions = await bot.get_channel(reaction.message.channel.id).send(
-                    f"{user.mention}", embed=embed
-                )
-
-                try:
-
-                    # Wait 30 seconds for new message
-                    message = await self.wait_for(
-                        "message",
-                        check=lambda message: message.author
-                        == self.get_user(self.main_user_account_id),
-                        timeout=30,
-                    )
-
-                    # On new message, do all the things
-                    await asyncio.gather(
-                        # Delete instructions and edit message with main bot (again, low-level is easier without ctx)
-                        bot.http.delete_message(
-                            instructions.channel.id, instructions.id
-                        ),
-                        bot.http.delete_message(message.channel.id, message.id),
-                        reaction.message.remove_reaction(
-                            reaction.emoji, self.get_user(self.main_user_account_id)
-                        ),
-                        # If message isn't "cancel" then edit the message
-                        reaction.message.edit(content=message.content)
-                        if message.content.lower() != "cancel"
-                        else asyncio.sleep(0),
-                    )
-
-                # On timeout, delete instructions and reaction
-                except asyncio.TimeoutError:
-                    # Delete instructions with main bot
-                    await asyncio.gather(
-                        bot.http.delete_message(
-                            instructions.channel.id, instructions.id
-                        ),
-                        reaction.message.remove_reaction(
-                            reaction.emoji, self.get_user(self.main_user_account_id)
-                        ),
-                    )

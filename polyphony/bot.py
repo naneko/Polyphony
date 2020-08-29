@@ -1,18 +1,20 @@
+import asyncio
 import logging
 
 import discord
 from discord.ext import commands
 
-from .helpers.checks import is_mod
 from .helpers.database import init_db, conn
-from .helpers.instances import create_member_instance, instances
-from .helpers.message_cache import recently_proxied_messages
+from .helpers.instances import (
+    create_member_instance,
+    instances,
+    update_presence,
+    reload_instance_module,
+)
 from .settings import (
     TOKEN,
     DEBUG,
     COMMAND_PREFIX,
-    DELETE_LOGS_CHANNEL_ID,
-    DELETE_LOGS_USER_ID,
 )
 
 log = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX)
 bot.remove_command("help")
 
 # Default Cog Extensions to be loaded
-init_extensions = ["commands.admin", "commands.user"]
+init_extensions = ["commands.admin", "commands.user", "commands.debug", "events"]
 
 # TODO: Better Help Messages
 # TODO: ON_ERROR() handling
@@ -40,15 +42,16 @@ log.info("Starting member initialization...")
 # Initialize Database
 init_db()
 
-# Start member instances
-log.debug("Creating member instances...")
-members = conn.execute("SELECT * FROM members WHERE member_enabled == 1").fetchall()
-if len(members) == 0:
-    log.info("No members found")
-for member in members:
-    create_member_instance(member)
+# Load extensions
+log.debug("Loading default extensions...")
+if DEBUG is True:
+    log.info("=== DEBUG MODE ENABLED ===")
+    # init_extensions.append("commands.debug")
 
-log.info(f"Member instances created.")
+for ext in init_extensions:
+    log.debug(f"Loading {ext}...")
+    bot.load_extension(ext)
+log.debug("Default extensions loaded.")
 
 
 @bot.event
@@ -58,78 +61,111 @@ async def on_ready():
     """
     log.info(f"Polyphony ready. Started as {bot.user}.")
 
+    log.info(f"Updating presence of all instances")
+    for instance in instances:
+        await instance.wait_until_ready()
+        await update_presence(instance, name=bot.get_user(instance.user.id))
+    log.info(f"Presences updated")
 
-# Load extensions
-log.debug("Loading default extensions...")
-if DEBUG is True:
-    log.info("=== DEBUG MODE ENABLED ===")
-    init_extensions.append("commands.debug")
-for ext in init_extensions:
-    log.debug(f"Loading {ext}...")
-    bot.load_extension(ext)
-log.debug("Default extensions loaded.")
+
+def initialize_members():
+    # Start member instances
+    log.debug("Creating member instances...")
+    members = conn.execute("SELECT * FROM members WHERE member_enabled == 1").fetchall()
+    if len(members) == 0:
+        log.info("No members found")
+    for i, member in enumerate(members):
+        create_member_instance(member)
+    log.info(f"Member instances created.")
+
+
+initialize_members()
 
 
 @bot.command()
-@is_mod()
-async def reload(ctx: commands.context):
+@commands.is_owner()
+async def reload(ctx: commands.context, reload_all=None):
     """
-    Reload default extensions (cogs) for DEBUG mode
+    Reload default extensions (cogs)
 
     :param ctx: Discord Context
     """
     # TODO: Restart Instances
     async with ctx.channel.typing():
-        if DEBUG is True:
-            log.info("Reloading Extensions...")
-            for extension in init_extensions:
-                from discord.ext.commands import (
-                    ExtensionNotLoaded,
-                    ExtensionNotFound,
-                    ExtensionFailed,
-                )
+        log.info("Reloading Extensions...")
 
-                try:
-                    bot.reload_extension(extension)
-                except (ExtensionNotLoaded, ExtensionNotFound, ExtensionFailed,) as e:
-                    log.exception(e)
-                    await ctx.send(
-                        embed=discord.Embed(
-                            title=f"Module {extension} failed to reload",
-                            color=discord.Color.red(),
-                        )
+        msg = await ctx.send(
+            embed=discord.Embed(
+                title="Reloading extensions...", color=discord.Color.orange()
+            )
+        )
+
+        for extension in init_extensions:
+            from discord.ext.commands import (
+                ExtensionNotLoaded,
+                ExtensionNotFound,
+                ExtensionFailed,
+            )
+
+            try:
+                bot.reload_extension(extension)
+            except (ExtensionNotLoaded, ExtensionNotFound, ExtensionFailed,) as e:
+                log.exception(e)
+                await ctx.send(
+                    embed=discord.Embed(
+                        title=f"Module {extension} failed to reload",
+                        color=discord.Color.red(),
                     )
-                log.debug(f"{extension} reloaded")
-            await ctx.send(
+                )
+            log.debug(f"{extension} reloaded")
+
+        if reload_all == "all":
+            await msg.edit(
                 embed=discord.Embed(
-                    title="Reload Successful", color=discord.Color.green()
+                    title="Reloading instances with updated module...",
+                    description="Shutting down instances...",
+                    color=discord.Color.orange(),
                 )
             )
-            log.info("Reloading complete.")
-        else:
-            await ctx.send(
-                "Hot loading is not tested, and hence not enabled, for Polyphony outside of DEBUG mode."
-            )
-
-
-@bot.event
-async def on_message(msg: discord.Message):
-    await bot.process_commands(msg)
-    if msg.channel.id == DELETE_LOGS_CHANNEL_ID or msg.author.id == DELETE_LOGS_USER_ID:
-
-        try:
-            embed_text = msg.embeds[0].description
-        except IndexError:
-            return
-
-        for oldmsg in recently_proxied_messages:
-            if str(oldmsg.id) in embed_text and not any(
-                [str(instance.user.id) in embed_text for instance in instances]
-            ):
-                log.debug(
-                    f"Deleting delete log message {msg.id} (was about {oldmsg.id})"
+            log.info("Reloading instances")
+            to_close = []
+            for i, instance in enumerate(instances):
+                to_close.append(instance.close())
+                instances.pop(i)
+            await asyncio.gather(*to_close)
+            await msg.edit(
+                embed=discord.Embed(
+                    title="Reloading instances with updated module...",
+                    description="Reloading instance module...",
+                    color=discord.Color.orange(),
                 )
-                await msg.delete()
+            )
+            reload_instance_module()
+            await msg.edit(
+                embed=discord.Embed(
+                    title="Reloading instances with updated module...",
+                    description="Restarting member instances...",
+                    color=discord.Color.orange(),
+                )
+            )
+            initialize_members()
+            for instance in instances:
+                await msg.edit(
+                    embed=discord.Embed(
+                        title="Reloading instances with updated module...",
+                        description=f"Restarting member instances...\nWaiting on {instance.member_name}...",
+                        color=discord.Color.orange(),
+                    )
+                )
+                await instance.wait_until_ready()
+                await update_presence(instance, name=bot.get_user(instance.user.id))
+            log.info("Instances reloaded")
+
+        await msg.delete()
+        await ctx.send(
+            embed=discord.Embed(title="Reload Successful", color=discord.Color.green())
+        )
+        log.info("Reloading complete.")
 
 
 bot.run(TOKEN)

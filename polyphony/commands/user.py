@@ -252,15 +252,23 @@ class User(commands.Cog):
         logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
         logger.color = discord.Color.orange()
         for instance in instances:
-            if instance.main_user_account_id == ctx.author.id:
-                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
-                try:
-                    await instance.sync()
-                    logger.content[
-                        -1
-                    ] = f":white_check_mark: Synced {instance.user.mention}"
-                except TypeError:
-                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+            try:
+                if instance.main_user_account_id == ctx.author.id:
+                    await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+                    try:
+                        await instance.sync()
+                        logger.content[
+                            -1
+                        ] = f":white_check_mark: Synced {instance.user.mention}"
+                    except TypeError:
+                        logger.content[
+                            -1
+                        ] = f":x: Failed to sync {instance.user.mention}"
+            except AttributeError as e:
+                log.error(e)
+                await logger.log(
+                    f":x: Failed to sync {instance.member_name} ({instance.pk_member_id}) due to an unknown error."
+                )
         logger.title = ":white_check_mark: Sync Complete"
         logger.color = discord.Color.green()
         await logger.update()
@@ -426,7 +434,7 @@ class User(commands.Cog):
             # Get User's Roles
             user_roles = []
             for role in ctx.author.roles[1:]:
-                if role.name not in ALWAYS_SYNC_ROLES:
+                if role.name not in ALWAYS_SYNC_ROLES and not role.managed:
                     user_roles.append(role)
             # Get Member's Roles
             member_roles = []

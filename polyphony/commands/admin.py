@@ -5,7 +5,7 @@ import asyncio
 import json
 import logging
 import sqlite3
-from typing import List
+from typing import List, Union
 
 import discord
 from discord.ext import commands
@@ -17,7 +17,11 @@ from polyphony.helpers.database import (
     c,
     conn,
 )
-from polyphony.helpers.instances import instances, create_member_instance
+from polyphony.helpers.instances import (
+    instances,
+    create_member_instance,
+    update_presence,
+)
 from polyphony.helpers.log_message import LogMessage
 from polyphony.helpers.pluralkit import pk_get_member
 from polyphony.settings import (
@@ -208,7 +212,8 @@ class Admin(commands.Cog):
 
                     # Mark token as used
                     conn.execute(
-                        "UPDATE tokens SET used = 1 WHERE token = ?", [bot_token["token"]]
+                        "UPDATE tokens SET used = 1 WHERE token = ?",
+                        [bot_token["token"]],
                     )
                     conn.commit()
 
@@ -228,6 +233,10 @@ class Admin(commands.Cog):
                 )
                 await logger.log("Syncing member instance...")
                 await instance.sync()
+                await instance.wait_until_ready()
+                await update_presence(
+                    instance, name=self.bot.get_user(instance.user.id)
+                )
 
             # Fail: Invalid ID
             else:
@@ -255,30 +264,36 @@ class Admin(commands.Cog):
         logger.color = discord.Color.orange()
 
         for i, instance in enumerate(instances):
-            if len(logger.content) > 30:
-                logger.title = ":white_check_mark: Batch Complete"
-                logger.color = discord.Color.green()
-                await logger.update()
-                logger = LogMessage(
-                    ctx, title=":hourglass: Syncing Next Batch of Members..."
+            try:
+                if len(logger.content) > 30:
+                    logger.title = ":white_check_mark: Batch Complete"
+                    logger.color = discord.Color.green()
+                    await logger.update()
+                    logger = LogMessage(
+                        ctx, title=":hourglass: Syncing Next Batch of Members..."
+                    )
+                    logger.color = discord.Color.orange()
+                await logger.log(
+                    f":hourglass: Syncing {instance.user.mention}... ({i}/{len(instances)})"
                 )
-                logger.color = discord.Color.orange()
-            await logger.log(
-                f":hourglass: Syncing {instance.user.mention}... ({i}/{len(instances)})"
-            )
-            sync_state = instance.sync()
-            if await sync_state == 0:
-                logger.content[
-                    -1
-                ] = f":white_check_mark: Synced {instance.user.mention}"
-            elif sync_state == 1:
-                logger.content[
-                    -1
-                ] = f":x: Failed to sync {instance.user.mention} because member ID `{instance.pk_member_id}` was not found on PluralKit's servers"
-            else:
-                logger.content[
-                    -1
-                ] = f":x: Failed to sync {instance.user.mention} becanse main user left server. Instance has been automatically suspended."
+                sync_state = instance.sync()
+                if await sync_state == 0:
+                    logger.content[
+                        -1
+                    ] = f":white_check_mark: Synced {instance.user.mention}"
+                elif sync_state == 1:
+                    logger.content[
+                        -1
+                    ] = f":x: Failed to sync {instance.user.mention} because member ID `{instance.pk_member_id}` was not found on PluralKit's servers"
+                else:
+                    logger.content[
+                        -1
+                    ] = f":x: Failed to sync {instance.user.mention} becanse main user left server. Instance has been automatically suspended."
+            except AttributeError as e:
+                log.error(e)
+                await logger.log(
+                    f":x: Failed to sync {instance.member_name} ({instance.pk_member_id}) due to an unknown error."
+                )
         logger.title = ":white_check_mark: Sync Complete"
         logger.color = discord.Color.green()
         await logger.update()
@@ -298,15 +313,23 @@ class Admin(commands.Cog):
         )
         logger.color = discord.Color.orange()
         for instance in instances:
-            if instance.main_user_account_id == main_user.id:
-                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
-                try:
-                    await instance.sync()
-                    logger.content[
-                        -1
-                    ] = f":white_check_mark: Synced {instance.user.mention}"
-                except TypeError:
-                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+            try:
+                if instance.main_user_account_id == main_user.id:
+                    await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+                    try:
+                        await instance.sync()
+                        logger.content[
+                            -1
+                        ] = f":white_check_mark: Synced {instance.user.mention}"
+                    except TypeError:
+                        logger.content[
+                            -1
+                        ] = f":x: Failed to sync {instance.user.mention}"
+            except AttributeError as e:
+                log.error(e)
+                await logger.log(
+                    f":x: Failed to sync {instance.member_name} ({instance.pk_member_id}) due to an unknown error."
+                )
         logger.title = ":white_check_mark: Sync Complete"
         logger.color = discord.Color.green()
         await logger.update()
@@ -323,38 +346,48 @@ class Admin(commands.Cog):
         logger = LogMessage(ctx, title=f":hourglass: Syncing {system_member}...")
         logger.color = discord.Color.orange()
         for instance in instances:
-            if instance.user.id == system_member.id:
-                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
-                try:
-                    await instance.sync()
-                    logger.content[
-                        -1
-                    ] = f":white_check_mark: Synced {instance.user.mention}"
-                except TypeError:
-                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
+            try:
+                if instance.user.id == system_member.id:
+                    await logger.log(f":hourglass: Syncing {instance.user.mention}...")
+                    try:
+                        await instance.sync()
+                        logger.content[
+                            -1
+                        ] = f":white_check_mark: Synced {instance.user.mention}"
+                    except TypeError:
+                        logger.content[
+                            -1
+                        ] = f":x: Failed to sync {instance.user.mention}"
+            except AttributeError as e:
+                log.error(e)
+                await logger.log(
+                    f":x: Failed to sync {instance.member_name} ({instance.pk_member_id}) due to an unknown error."
+                )
         logger.title = ":white_check_mark: Sync Complete"
         logger.color = discord.Color.green()
         await logger.update()
 
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
-    async def invite(self, ctx: commands.context, member: discord.Member):
+    async def invite(self, ctx: commands.context, member: Union[int, discord.Member]):
         """
         Generates an invite link with pre-set permissions from a client ID.
 
+        :param member: Client to generate invite for
         :param ctx: Discord Context
-        :param client_id: Bot Client ID
         """
         log.debug("Generating invite link")
+        if type(member) is discord.Member:
+            member = member.id
         embed = discord.Embed(
             title=f"Invite Link for {ctx.guild.name}",
             url=discord.utils.oauth_url(
-                member.id,
+                member,
                 permissions=discord.Permissions(DEFAULT_INSTANCE_PERMS),
                 guild=ctx.guild,
             ),
         )
-        embed.set_footer(text=f"Client ID: {member.id}")
+        embed.set_footer(text=f"Client ID: {member}")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -409,6 +442,10 @@ class Admin(commands.Cog):
                 )
                 log.info(f"{system_member} has been started by {ctx.message.author}")
                 await instance.sync()
+                await instance.wait_until_ready()
+                await update_presence(
+                    instance, name=self.bot.get_user(instance.user.id)
+                )
             else:
                 await ctx.send(f"{system_member.mention} is already running")
 
