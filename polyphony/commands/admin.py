@@ -474,6 +474,7 @@ class Admin(commands.Cog):
 
                     log.info(f"{system_member} restarted")
 
+    @restart.command()
     async def stagnant(self, ctx: commands.context):
         log.info("Restarting stagnant instances")
         for i, instance in enumerate(instances):
