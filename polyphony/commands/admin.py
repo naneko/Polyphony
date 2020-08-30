@@ -450,20 +450,25 @@ class Admin(commands.Cog):
             else:
                 await ctx.send(f"{system_member.mention} is already running")
 
+    async def restart_helper(self, instance):
+        instance.clear()
+        asyncio.run_coroutine_threadsafe(instance.start(instance.get_token()), self.bot.loop)
+        await instance.wait_until_ready()
+        await update_presence(
+            instance, name=self.bot.get_user(instance.user.id)
+        )
+
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
     async def restart(self, ctx: commands.context, system_member: Union[str, discord.Member]):
         if system_member == "stagnant":
             log.info("Restarting stagnant instances")
+            instance_queue = []
             with ctx.channel.typing():
                 for i, instance in enumerate(instances):
                     if instance.user is None:
-                        instance.clear()
-                        asyncio.run_coroutine_threadsafe(instance.start(instance.get_token()), self.bot.loop)
-                        await instance.wait_until_ready()
-                        await update_presence(
-                            instance, name=self.bot.get_user(instance.user.id)
-                        )
+                        instance_queue.append(self.restart_helper(instance))
+            await asyncio.gather(*instance_queue)
             await ctx.send("Finished attempting to restart stagnant instances")
             log.info("Finished attempting to restart stagnant instances")
             return
