@@ -94,7 +94,7 @@ class Events(commands.Cog):
                         ),
                     )
 
-                    new_proxied_message(message)
+                    new_proxied_message(msg)
 
                     end = time.time()
                     log.debug(
