@@ -445,7 +445,7 @@ class Admin(commands.Cog):
                     await instance.sync()
                     await instance.wait_until_ready()
                     await update_presence(
-                        instance, name=self.bot.get_user(instance.user.id)
+                        instance, name=self.bot.get_user(instance.main_user_account_id)
                     )
             else:
                 await ctx.send(f"{system_member.mention} is already running")
@@ -455,7 +455,7 @@ class Admin(commands.Cog):
         asyncio.run_coroutine_threadsafe(instance.start(instance.get_token()), self.bot.loop)
         await instance.wait_until_ready()
         await update_presence(
-            instance, name=self.bot.get_user(instance.user.id)
+            instance, name=self.bot.get_user(instance.main_user_account_id)
         )
 
     @commands.command()
@@ -471,6 +471,26 @@ class Admin(commands.Cog):
             await asyncio.gather(*instance_queue)
             await ctx.send("Finished attempting to restart stagnant instances")
             log.info("Finished attempting to restart stagnant instances")
+            return
+        if system_member == "all":
+            log.info("Restarting all instances")
+            instance_queue = []
+            with ctx.channel.typing():
+                for i, instance in enumerate(instances):
+                    instance_queue.append(self.restart_helper(instance))
+            await asyncio.gather(*instance_queue)
+            await ctx.send("Finished attempting to restart all instances")
+            log.info("Finished attempting to restart all instances")
+            return
+        if system_member == "presence":
+            with ctx.channel.typing():
+                instance_queue = []
+                for i, instance in enumerate(instances):
+                    instance_queue.append(update_presence(
+                        instance, name=self.bot.get_user(instance.user.id)
+                    ))
+            await asyncio.gather(*instance_queue)
+            await ctx.send("Done")
             return
         for i, instance in enumerate(instances):
             if instance.user.id == system_member.id:
