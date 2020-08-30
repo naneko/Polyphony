@@ -106,6 +106,8 @@ class Events(commands.Cog):
                 instance.user in msg.mentions
                 and msg.author.id != instance.main_user_account_id
                 and msg.author.id != instance.user.id
+                and msg.author.id != self.bot.user.id
+                and msg.author.bot is False
                 and not msg.content.startswith(COMMAND_PREFIX)
             ):
                 # Forward Ping

@@ -431,23 +431,46 @@ class Admin(commands.Cog):
         ).fetchone()
         if member is not None:
             if not member["member_enabled"]:
-                c.execute(
-                    "UPDATE members SET member_enabled = 1 WHERE member_account_id = ?",
-                    [system_member.id],
-                )
-                instance = create_member_instance(member)
-                instances.append(instance)
-                await ctx.send(
-                    f"{system_member.mention} started by {ctx.message.author.mention}"
-                )
-                log.info(f"{system_member} has been started by {ctx.message.author}")
-                await instance.sync()
-                await instance.wait_until_ready()
-                await update_presence(
-                    instance, name=self.bot.get_user(instance.user.id)
-                )
+                with ctx.channel.typing():
+                    c.execute(
+                        "UPDATE members SET member_enabled = 1 WHERE member_account_id = ?",
+                        [system_member.id],
+                    )
+                    instance = create_member_instance(member)
+                    instances.append(instance)
+                    await ctx.send(
+                        f"{system_member.mention} started by {ctx.message.author.mention}"
+                    )
+                    log.info(f"{system_member} has been started by {ctx.message.author}")
+                    await instance.sync()
+                    await instance.wait_until_ready()
+                    await update_presence(
+                        instance, name=self.bot.get_user(instance.user.id)
+                    )
             else:
                 await ctx.send(f"{system_member.mention} is already running")
+
+    @commands.command()
+    @commands.check_any(commands.is_owner(), is_mod())
+    async def restart(self, ctx: commands.context, system_member: discord.Member):
+        for i, instance in enumerate(instances):
+            if instance.user.id == system_member.id:
+                with ctx.channel.typing():
+                    log.info(f"{system_member} restarting...")
+                    instance.clear()
+                    log.debug(f"{system_member} stopped. Starting...")
+                    asyncio.run_coroutine_threadsafe(instance.start(instance.get_token()), self.bot.loop)
+                    log.debug(f"{system_member} waiting to be ready...")
+                    await instance.wait_until_ready()
+                    log.debug(f"{system_member} updating presence...")
+                    await update_presence(
+                        instance, name=self.bot.get_user(instance.user.id)
+                    )
+                    await ctx.send(
+                        f"{system_member.mention} restarted"
+                    )
+
+                    log.info(f"{system_member} restarted")
 
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
