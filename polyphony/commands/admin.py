@@ -450,10 +450,22 @@ class Admin(commands.Cog):
             else:
                 await ctx.send(f"{system_member.mention} is already running")
 
-    @commands.group()
+    @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
-    async def restart(self, ctx: commands.context, system_member: discord.Member):
-        if ctx.invoked_subcommand is not None:
+    async def restart(self, ctx: commands.context, system_member: Union[str, discord.Member]):
+        if system_member == "stagnant":
+            log.info("Restarting stagnant instances")
+            with ctx.channel.typing():
+                for i, instance in enumerate(instances):
+                    if instance.user is None:
+                        instance.clear()
+                        asyncio.run_coroutine_threadsafe(instance.start(instance.get_token()), self.bot.loop)
+                        await instance.wait_until_ready()
+                        await update_presence(
+                            instance, name=self.bot.get_user(instance.user.id)
+                        )
+            await ctx.send("Finished attempting to restart stagnant instances")
+            log.info("Finished attempting to restart stagnant instances")
             return
         for i, instance in enumerate(instances):
             if instance.user.id == system_member.id:
@@ -473,21 +485,6 @@ class Admin(commands.Cog):
                     )
 
                     log.info(f"{system_member} restarted")
-
-    @restart.command()
-    async def stagnant(self, ctx: commands.context):
-        log.info("Restarting stagnant instances")
-        for i, instance in enumerate(instances):
-            if instance.user is None:
-                with ctx.channel.typing():
-                    instance.clear()
-                    asyncio.run_coroutine_threadsafe(instance.start(instance.get_token()), self.bot.loop)
-                    await instance.wait_until_ready()
-                    await update_presence(
-                        instance, name=self.bot.get_user(instance.user.id)
-                    )
-        await ctx.send("Finished attempting to restart stagnant instances")
-        log.info("Finished attempting to restart stagnant instances")
 
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
