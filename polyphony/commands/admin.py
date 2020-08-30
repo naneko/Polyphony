@@ -441,7 +441,9 @@ class Admin(commands.Cog):
                     await ctx.send(
                         f"{system_member.mention} started by {ctx.message.author.mention}"
                     )
-                    log.info(f"{system_member} has been started by {ctx.message.author}")
+                    log.info(
+                        f"{system_member} has been started by {ctx.message.author}"
+                    )
                     await instance.sync()
                     await instance.wait_until_ready()
                     await update_presence(
@@ -452,7 +454,9 @@ class Admin(commands.Cog):
 
     async def restart_helper(self, instance):
         instance.clear()
-        asyncio.run_coroutine_threadsafe(instance.start(instance.get_token()), self.bot.loop)
+        asyncio.run_coroutine_threadsafe(
+            instance.start(instance.get_token()), self.bot.loop
+        )
         await instance.wait_until_ready()
         await update_presence(
             instance, name=self.bot.get_user(instance.main_user_account_id)
@@ -460,7 +464,9 @@ class Admin(commands.Cog):
 
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
-    async def restart(self, ctx: commands.context, system_member: Union[str, discord.Member]):
+    async def restart(
+        self, ctx: commands.context, system_member: Union[str, discord.Member]
+    ):
         if system_member == "stagnant":
             log.info("Restarting stagnant instances")
             instance_queue = []
@@ -486,9 +492,15 @@ class Admin(commands.Cog):
             with ctx.channel.typing():
                 instance_queue = []
                 for i, instance in enumerate(instances):
-                    instance_queue.append(update_presence(
-                        instance, name=self.bot.get_user(instance.user.id)
-                    ))
+                    instance_queue.append(
+                        update_presence(
+                            instance,
+                            name=self.bot.get_user(instance.user.id),
+                            status=self.bot.get_guild(GUILD_ID)
+                            .get_member(instance.user.id)
+                            .status,
+                        )
+                    )
             await asyncio.gather(*instance_queue)
             await ctx.send("Done")
             return
@@ -498,16 +510,16 @@ class Admin(commands.Cog):
                     log.info(f"{system_member} restarting...")
                     instance.clear()
                     log.debug(f"{system_member} stopped. Starting...")
-                    asyncio.run_coroutine_threadsafe(instance.start(instance.get_token()), self.bot.loop)
+                    asyncio.run_coroutine_threadsafe(
+                        instance.start(instance.get_token()), self.bot.loop
+                    )
                     log.debug(f"{system_member} waiting to be ready...")
                     await instance.wait_until_ready()
                     log.debug(f"{system_member} updating presence...")
                     await update_presence(
                         instance, name=self.bot.get_user(instance.user.id)
                     )
-                    await ctx.send(
-                        f"{system_member.mention} restarted"
-                    )
+                    await ctx.send(f"{system_member.mention} restarted")
 
                     log.info(f"{system_member} restarted")
 
