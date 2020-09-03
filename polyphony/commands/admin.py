@@ -66,9 +66,9 @@ class Admin(commands.Cog):
         embed = discord.Embed(title="All Members")
         await self.send_member_list(ctx, embed, member_list)
 
-    @list.command()
+    @list.command(name="system")
     @commands.check_any(commands.is_owner(), is_mod())
-    async def system(self, ctx, member: discord.Member):
+    async def _system(self, ctx: commands.context, member: discord.Member):
         log.debug(f"Listing members for {member.display_name}...")
         c.execute(
             "SELECT * FROM members WHERE discord_account_id == ?", [member.id],
