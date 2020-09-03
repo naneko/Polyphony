@@ -465,7 +465,7 @@ class Admin(commands.Cog):
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
     async def restart(
-        self, ctx: commands.context, system_member: Union[str, discord.Member]
+        self, ctx: commands.context, system_member: Union[discord.Member, str]
     ):
         if system_member == "stagnant":
             log.info("Restarting stagnant instances")
