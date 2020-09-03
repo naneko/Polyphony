@@ -40,6 +40,20 @@ class Admin(commands.Cog):
         self.bot = bot
         self.token_session = []
 
+    @commands.command()
+    @commands.is_owner()
+    async def upgrade(self, ctx: commands.context):
+        from git import Repo
+
+        with ctx.channel.typing():
+            repo = Repo("..")
+            o = repo.remotes.origin
+            o.pull()
+
+        await ctx.send(
+            f"Polyphony pulled `{repo.heads[0].commit}` from master branch. Run `;;reload` or `;;reload all` to complete upgrade."
+        )
+
     @commands.group()
     @commands.check_any(commands.is_owner(), is_mod())
     async def list(self, ctx: commands.context):
@@ -463,7 +477,7 @@ class Admin(commands.Cog):
         )
 
     @commands.command()
-    @commands.check_any(commands.is_owner(), is_mod())
+    @commands.is_owner()
     async def restart(
         self, ctx: commands.context, system_member: Union[discord.Member, str]
     ):
