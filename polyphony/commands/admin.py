@@ -68,7 +68,7 @@ class Admin(commands.Cog):
 
     @list.command()
     @commands.check_any(commands.is_owner(), is_mod())
-    async def system(self, ctx: commands.context, member: discord.Member):
+    async def system(self, ctx, member: discord.Member):
         log.debug(f"Listing members for {member.display_name}...")
         c.execute(
             "SELECT * FROM members WHERE discord_account_id == ?", [member.id],
@@ -522,6 +522,7 @@ class Admin(commands.Cog):
                     await ctx.send(f"{system_member.mention} restarted")
 
                     log.info(f"{system_member} restarted")
+                    break
 
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
