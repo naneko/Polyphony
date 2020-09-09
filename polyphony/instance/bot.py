@@ -119,7 +119,19 @@ class PolyphonyInstance(discord.Client):
         )
 
         # Update Username
-        await self.user.edit(username=self.member_name)
+        try:
+            await self.user.edit(username=self.member_name)
+        except discord.HTTPException:
+            log.debug(
+                f"{self.user} ({self.pk_member_id}): Username Update Failed. Probably being updated too frequently."
+            )
+            if ctx is not None:
+                embed = discord.Embed(
+                    title="Error while updating username",
+                    description="You are updating your username too fast. Please try again later.",
+                    color=discord.Color.red(),
+                )
+                await ctx.channel.send(embed=embed)
 
         # Update Nickname
         await self.push_nickname_updates()
@@ -128,8 +140,14 @@ class PolyphonyInstance(discord.Client):
         import requests
 
         try:
-            await self.user.edit(avatar=requests.get(self.pk_avatar_url).content)
-        except:
+            log.debug(f"{self.user} ({self.pk_member_id}): Getting Avatar")
+            avatar = requests.get(self.pk_avatar_url).content
+            log.debug(f"{self.user} ({self.pk_member_id}): Updating Avatar")
+            await self.user.edit(avatar=avatar)
+        except discord.HTTPException:
+            log.debug(
+                f"{self.user} ({self.pk_member_id}): Avatar Update Failed. Probably being updated too frequently."
+            )
             if ctx is not None:
                 embed = discord.Embed(
                     title="Error while updating profile picture",

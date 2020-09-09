@@ -4,6 +4,7 @@ Admin commands to configure polyphony
 import asyncio
 import json
 import logging
+import random
 import sqlite3
 from typing import List, Union
 
@@ -35,6 +36,9 @@ log = logging.getLogger("polyphony." + __name__)
 # TODO: Allow logging channel
 # TODO: Error Handling
 # TODO: "Get" command to get information about a PluralKit member via system id or member id
+# TODO: De-duplicate instances command
+
+
 class Admin(commands.Cog):
     def __init__(self, bot: commands.bot):
         self.bot = bot
@@ -52,6 +56,41 @@ class Admin(commands.Cog):
 
         await ctx.send(
             f"Polyphony pulled `{repo.heads[0].commit}` from master branch. Run `;;reload` or `;;reload all` to complete upgrade."
+        )
+
+    @commands.command(aliases=["unregister"])
+    @commands.is_owner()
+    async def deregister(self, ctx: commands.context, member: discord.Member):
+        with ctx.channel.typing():
+            for i, instance in enumerate(instances):
+                if instance.user.id == member.id:
+                    instance.member_name = f"{random.randint(0000,9999)}"
+                    instance.nickname = ""
+                    instance.display_name = ""
+                    instance.pk_avatar_url = "https://picsum.photos/256"
+                    await instance.update()
+                    roles = []
+                    for role in member.roles[1:]:
+                        if role.name is not role.managed:
+                            roles.append(role)
+                    await instance.update_default_roles()
+                    await member.remove_roles(*roles)
+                    conn.execute(
+                        "UPDATE tokens SET used = 0 WHERE token = ?",
+                        [instance.get_token()],
+                    )
+                    conn.execute(
+                        "DELETE FROM members WHERE token = ?", [instance.get_token()],
+                    )
+                    conn.commit()
+                    await instance.close()
+                    instances.pop(i)
+                    await ctx.channel.send(
+                        f"{member.mention} has been deregistered and the token has been made available"
+                    )
+                    return
+        await ctx.channel.send(
+            f"{member.mention} not found in active instances. Please start the instance before deregistering."
         )
 
     @commands.group()
@@ -152,6 +191,13 @@ class Admin(commands.Cog):
         instance = None
 
         async with ctx.channel.typing():
+            # Account is not a user
+            if account.bot is True:
+                logger.title = "Error Registering: Bad Account Pairing"
+                logger.color = discord.Color.red()
+                await logger.log(f"{account.mention} is a bot user")
+                return
+
             await logger.log("Fetching member from PluralKit...")
             member = await pk_get_member(pluralkit_member_id)
 
