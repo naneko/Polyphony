@@ -40,29 +40,29 @@ class User(commands.Cog):
             )
             embed.add_field(
                 name=":pencil: __Editing and deleting messages__",
-                value="**__Editing__**"
-                "\n**- Method 1:** React with :pencil: to the message and then type your edit"
-                "\n**- Method 2:** Type `;;edit <message>` to edit last message sent by a system member"
-                "\n**- Method 3:** Type `;;edit (message id) <message> ` to edit a message by it's id"
-                "\n\n**__Deleting__**"
-                "\n**- Method 1:** React with :x: on the message"
-                "\n**- Method 2:** Type `;;del` to delete the last message sent by a system member"
-                "\n**- Method 3:** Type `;;del` to delete a message by id"
-                "\n\n[How to get the ID]"
+                value="> **__Editing__**"
+                "\n> **- Method 1:** React with :pencil: to the message and then type your edit"
+                "\n> **- Method 2:** Type `;;edit <message>` to edit last message sent by a system member"
+                "\n> **- Method 3:** Type `;;edit (message id) <message> ` to edit a message by it's id"
+                "\n\n> **__Deleting__**"
+                "\n> **- Method 1:** React with :x: on the message"
+                "\n> **- Method 2:** Type `;;del` to delete the last message sent by a system member"
+                "\n> **- Method 3:** Type `;;del` to delete a message by id"
+                "\n\n> [How to get the ID]"
                 "(https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-)"
-                "\n*Method 1 may not work on older messages*",
+                "\n> *Method 1 may not work on older messages*",
                 inline=False,
             )
             embed.add_field(
                 name=":inbox_tray: __Syncing from PluralKit__",
-                value="`;;sync` will sync changes for all your members\n"
-                "`;;sync member (member mention)` will sync changes for one specific member",
+                value="> `;;sync` will sync changes for all your members\n"
+                "> `;;sync member (member mention)` will sync changes for one specific member",
                 inline=False,
             )
             embed.add_field(
                 name=":information_source: __More Help__",
-                value="`;;help user` to get the full command list for Polyphony users"
-                "\n`;;help admin` to get the full command list for Moderators *(Moderators Only)*",
+                value="> `;;help user` to get the full command list for Polyphony users"
+                "\n> `;;help admin` to get the full command list for Moderators *(Moderators Only)*",
             )
             await ctx.channel.send(embed=embed)
 
@@ -77,60 +77,60 @@ class User(commands.Cog):
         )
         embed.add_field(
             name=":pencil: `;;edit (message id) <message>`",
-            value="**Edits a message**"
-            "\nIf you don't include an ID, it will edit the last message sent by a system member."
-            "\n[How to get a message ID]"
+            value="> **Edits a message**"
+            "\n> If you don't include an ID, it will edit the last message sent by a system member."
+            "\n> [How to get a message ID]"
             "(https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-)",
             inline=False,
         )
         embed.add_field(
             name=":x: `;;del (message id)`",
-            value="**Deletes a message**"
-            "\nIf you don't include an ID, it will delete the last message sent by a system member."
-            "\n[How to get a message ID]"
+            value="> **Deletes a message**"
+            "\n> If you don't include an ID, it will delete the last message sent by a system member."
+            "\n> [How to get a message ID]"
             "(https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-)",
             inline=False,
         )
         embed.add_field(
             name=":inbox_tray: `;;sync`",
-            value="**Syncs information from PluralKit for all members**\n"
-            "`;;sync member (member mention)` will sync changes for one specific member\n"
-            "*Tip: Setting a display name in PluralKit will set a nickname that is different from the bot username*",
+            value="> **Syncs information from PluralKit for all members**\n"
+            "> `;;sync member (member mention)` will sync changes for one specific member",
             inline=False,
         )
         embed.add_field(
             name=":id: `;;nick <member> (nickname)`",
-            value="**Set the nickname of a system member.**\n"
-            "If you want to reset it to the name you have defined in PluralKit, just leave the `nickname` parameter empty",
+            value="> **Set the nickname of a system member.**\n"
+            "> If you want to reset it to the name you have defined in PluralKit, just leave the `nickname` parameter empty",
             inline=False,
         )
         embed.add_field(
             name=":question: `;;whoarewe`",
-            value="Get a list of all the members you have registered with Polyphony",
+            value="> Get a list of all the members you have registered with Polyphony",
             inline=False,
         )
         embed.add_field(
             name=":grey_question: `;;whois <Polyphony member user>`",
-            value="Get information about any Polyphony member user"
-            "\n*This command can be used by anyone*",
+            value="> Get information about any Polyphony member user"
+            "\n> *This command can be used by anyone*",
             inline=False,
         )
         embed.add_field(
             name=":bulb: `;;rolesync <Polyphony member user>`",
-            value="**This enables role sync mode.** This will temporarily remove all roles from the main user and "
-            "replace them with the system member's roles. Any roles you assign to yourself (the main user) will be "
-            "synced with the system member. Type `done` and your main user's original roles will be restored.\n"
-            "*This command will auto timeout after 5 minutes. If it times out, the changes will not be saved.*",
+            value="> **This enables role sync mode.**\n"
+            "> **Step 1** Use the command\n> \n"
+            "> **Step 2** Assign the roles you want for that system member to yourself\n"
+            "> **Step 3** Type `done`"
+            "> *This command will auto timeout after 5 minutes. If it times out, the changes will not be saved.*",
             inline=False,
         )
         embed.add_field(
             name=":mag: `;;slots`",
-            value="Show the number of free slots available for new members to be registered with Polyphony",
+            value="> Show the number of free slots available for new members to be registered with Polyphony",
             inline=False,
         )
         embed.add_field(
             name=":stopwatch: `;;ping`",
-            value="Check if Polyphony, and hence Polyphony member users, is online and functioning",
+            value="> Check if Polyphony, and hence Polyphony member users, is online and functioning",
             inline=False,
         )
         await ctx.channel.send(embed=embed)
@@ -141,72 +141,72 @@ class User(commands.Cog):
         embed = discord.Embed(title="Polyphony Admin Help", inline=False,)
         embed.add_field(
             name=":hamburger: `;;list`",
-            value="`;;list` lists all enabled members\n"
-            "`;;list all` lists all members registered with Polyphony\n"
-            "`;;list system <system owner>` lists all members in a system\n"
-            "`;;list suspended` lists all suspended members",
+            value="> `;;list` lists all enabled members\n"
+            "> `;;list all` lists all members registered with Polyphony\n"
+            "> `;;list system <system owner>` lists all members in a system\n"
+            "> `;;list suspended` lists all suspended members",
             inline=False,
         )
         embed.add_field(
             name=":scroll: `;;register <PluralKit member ID> <Main Account>`",
-            value="Ask members to give you the 5-letter PluralKit member IDs that are listed with pk;list (not system ID!)\n"
-            "The `Main Account` is **__NOT__** a bot account. It is the Discord user.\n"
-            "*You will be prompted with a confirmation dialog before the member is added. This will give you a chance to check for mistakes.*",
+            value="> Ask members to give you the 5-letter PluralKit member IDs that are listed with pk;list (not system ID!)\n"
+            "> The `Main Account` is **__NOT__** a bot account. It is the Discord user.\n"
+            "> *You will be prompted with a confirmation dialog before the member is added. This will give you a chance to check for mistakes.*",
             inline=False,
         )
         embed.add_field(
             name=":inbox_tray: `;;syncall`",
-            value="**Syncs information from PluralKit for all members**\n"
-            "`;;syncall system <main account>` will sync the users for a specific system\n"
-            "`;;syncall member <system member>` will sync a specific system member"
-            "*Will also check for system members belonging to main accounts who have left the server and automatically suspend them*",
+            value="> **Syncs information from PluralKit for all members**\n"
+            "> `;;syncall system <main account>` will sync the users for a specific system\n"
+            "> `;;syncall member <system member>` will sync a specific system member"
+            "> *Will also check for system members belonging to main accounts who have left the server and automatically suspend them*",
             inline=False,
         )
         embed.add_field(
             name=":mailbox_with_mail: `;;invite <client id/user id/user mention>`",
-            value="Creates an invite link for the instance bot ~~(or any other bot)~~",
+            value="> Creates an invite link for the instance bot ~~(or any other bot)~~",
             inline=False,
         )
         embed.add_field(
             name=":red_circle: `;;suspend <Polyphony member user>`",
-            value="Suspends a member instance, sending it offline.\n"
-            "*Can help save on resources.*",
+            value="> Suspends a member instance, sending it offline.\n"
+            "> *Can help save on resources.*",
             inline=False,
         )
         embed.add_field(
             name=":green_circle: `;;start <Polyphony member user>`",
-            value="Starts a member instance if it's suspended, bringing it online.",
+            value="> Starts a member instance if it's suspended, bringing it online.",
             inline=False,
         )
         embed.add_field(
             name=":no_entry_sign: `;;disable <Polyphony member user>`",
-            value="**Permanently disables a member instance**\n"
-            "This will delete the instance from the Polyphony system. Because message history is not removed, bot users (tokens) cannot be reused after being disabled.\n"
-            "*If you do want to reuse a bot for some reason, reset the token in the Discord developer portal and add it with `;;tokens`*\n"
-            "*Due to the destructive nature of this command, a confirmation dialog will be shown before disabling to check for mistakes*",
+            value="> **Permanently disables a member instance**\n"
+            "> This will delete the instance from the Polyphony system. Because message history is not removed, bot users (tokens) cannot be reused after being disabled.\n"
+            "> *If you do want to reuse a bot for some reason, reset the token in the Discord developer portal and add it with `;;tokens`*\n"
+            "> *Due to the destructive nature of this command, a confirmation dialog will be shown before disabling to check for mistakes*",
             inline=False,
         )
         embed.add_field(
             name=":floppy_disk: `;;tokens`",
-            value="**Make sure DMs are __ON__ for the server**\n"
-            "Run on the server. You will receive further instructions in a DM.\n"
-            "__Never paste tokens into the server__",
+            value="> **Make sure DMs are __ON__ for the server**\n"
+            "> Run on the server. You will receive further instructions in a DM.\n"
+            "> __Never paste tokens into the server__",
             inline=False,
         )
         embed.add_field(
             name=":grey_question: `;;whois <Polyphony member user>`",
-            value="Get information about any Polyphony member user"
-            "\n*This command can be used by anyone*",
+            value="> Get information about any Polyphony member user"
+            "\n> *This command can be used by anyone*",
             inline=False,
         )
         embed.add_field(
             name=":mag: `;;slots`",
-            value="Show the number of free slots available for new members to be registered with Polyphony",
+            value="> Show the number of free slots available for new members to be registered with Polyphony",
             inline=False,
         )
         embed.add_field(
             name=":stopwatch: `;;ping`",
-            value="Check if Polyphony, and hence Polyphony member users, is online and functioning",
+            value="> Check if Polyphony, and hence Polyphony member users, is online and functioning",
             inline=False,
         )
         await ctx.channel.send(embed=embed)

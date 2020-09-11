@@ -99,6 +99,7 @@ class Debug(commands.Cog):
         conn.execute(
             "DELETE FROM users WHERE discord_account_id = ?", [member.id],
         )
+        conn.commit()
         await ctx.channel.send(
             f"`POLYPHONY SYSTEM UTILITIES` {member.mention} has been removed from the collection of Polyphony users."
         )
