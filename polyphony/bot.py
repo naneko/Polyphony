@@ -79,12 +79,13 @@ async def initialize_members():
     log.debug("Initializing member instances...")
     members = conn.execute("SELECT * FROM members WHERE member_enabled == 1").fetchall()
     new_instance_waits = []
+    new_instance_presence = []
     if len(members) == 0:
         log.info("No members found")
     for i, member in enumerate(members):
         new_instance = create_member_instance(member)
         new_instance_waits.append(new_instance.wait_until_ready())
-        new_instance_waits.append(
+        new_instance_presence.append(
             update_presence(
                 new_instance, name=bot.get_user(new_instance.main_user_account_id),
             )
@@ -92,7 +93,9 @@ async def initialize_members():
         if (i + 1) % 10 == 0 or i + 1 >= len(members):
             log.debug(f"Waiting for batch (Continue on {i + 1}/{len(members)})")
             await asyncio.gather(*new_instance_waits)
+            await asyncio.gather(*new_instance_presence)
             new_instance_waits = []
+            new_instance_presence = []
             log.debug(f"Next batch...")
             log.info(f"{i + 1}/{len(members)} MEMBERS READY")
     log.info(f"[ALL MEMBER INSTANCES READY]")

@@ -68,14 +68,8 @@ class PolyphonyInstance(discord.Client):
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
         log.debug(f"[STARTUP]     {self.user} ({self.pk_member_id})")
-        # TODO: Fix
-        # state = await self.check_for_invalid_states()
-        # if state == 1:
-        #     log.warning(
-        #         f"Failed to start {self.user} ({self.pk_member_id}) because main user left. Instance has been suspended."
-        #     )
-        #     await self.close()
-        #     return
+
+        await self.check_for_invalid_states()
 
         # Update Self ID in Database
         with conn:
@@ -98,7 +92,9 @@ class PolyphonyInstance(discord.Client):
         log.info(f"[RESUMED]      {self.user} ({self.pk_member_id})")
 
     async def on_error(self, event_method, *args, **kwargs):
-        log.error(f"{self.user} ({self.pk_member_id}): {event_method}")
+        log.error(
+            f"{self.user} ({self.pk_member_id}): Ignoring exception in {event_method}"
+        )
 
     async def on_guild_join(self, guild: discord.Guild):
         # Update Nickname on guild join
@@ -259,14 +255,14 @@ class PolyphonyInstance(discord.Client):
             # TODO: Change instance array to be dict instead to allow direct access instead of iterative access
             for i, instance in enumerate(instances):
                 if instance.user.id == self.user.id:
-                    await instance.change_presence(
+                    await self.change_presence(
                         status=discord.Status.offline, activity=None
                     )
-                    await instance.close()
+                    await self.close()
                     with conn:
                         c.execute(
                             "UPDATE members SET member_enabled = 0 WHERE token = ?",
-                            [instance.get_token()],
+                            [self.get_token()],
                         )
                     instances.pop(i)
             return 1
