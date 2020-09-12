@@ -86,11 +86,12 @@ async def initialize_members():
                 new_instance, name=bot.get_user(new_instance.main_user_account_id),
             )
         )
-        if (i + 1) % 10 == 0 or i - 1 >= len(members):
-            log.debug(f"Waiting for batch (Continue on {i}/{len(members)})")
+        if (i + 1) % 10 == 0 or i + 1 >= len(members):
+            log.debug(f"Waiting for batch (Continue on {i + 1}/{len(members)})")
             await asyncio.gather(*new_instance_waits)
             new_instance_waits = []
-            log.debug(f"Next batch... (Continue on {i}/{len(members)})")
+            log.debug(f"Next batch...")
+            log.info(f"{i+1}/{len(members)} members READY")
     log.info(f"Member instances created.")
 
 
