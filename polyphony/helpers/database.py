@@ -16,7 +16,7 @@ c = conn.cursor()
 
 log = logging.getLogger(__name__)
 
-schema_version = 1
+schema_version = 2
 
 
 def init_db():

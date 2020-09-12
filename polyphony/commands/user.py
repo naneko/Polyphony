@@ -5,7 +5,7 @@ import asyncio
 import json
 import logging
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, Union
 
 import discord
 from discord.ext import commands
@@ -92,6 +92,13 @@ class User(commands.Cog):
             inline=False,
         )
         embed.add_field(
+            name=":speech_balloon: `;;autoproxy <latch / Polyphony member user>`",
+            value="> **Automatically proxies members without needing a tag**"
+            "\n> `;;autoproxy <Polyphony member user>` will autoproxy a specific member unless you use the tags of a different member"
+            "\n> `;;autoproxy latch` will remember the last tag you used and autoproxy that member until you use a different tag"
+            "\n> *This is essentially the same as [PluralKit's autoproxy](https://pluralkit.me/guide/#proxying). You can also use `;;ap`.*",
+        )
+        embed.add_field(
             name=":inbox_tray: `;;sync`",
             value="> **Syncs information from PluralKit for all members**\n"
             "> `;;sync member (member mention)` will sync changes for one specific member",
@@ -117,7 +124,7 @@ class User(commands.Cog):
         embed.add_field(
             name=":bulb: `;;rolesync <Polyphony member user>`",
             value="> **This enables role sync mode.**\n"
-            "> **Step 1** Use the command\n> \n"
+            "> **Step 1** Use the command\n"
             "> **Step 2** Assign the roles you want for that system member to yourself\n"
             "> **Step 3** Type `done`"
             "> *This command will auto timeout after 5 minutes. If it times out, the changes will not be saved.*",
@@ -411,6 +418,48 @@ class User(commands.Cog):
             embed=discord.Embed(title=f"Pong ({timedelta(seconds=self.bot.latency)})")
         )
 
+    @commands.command(aliases=["ap"])
+    @is_polyphony_user()
+    async def autoproxy(self, ctx: commands.context, arg: Union[discord.Member, str]):
+        embed = None
+        if (
+            type(arg) is discord.Member
+            and conn.execute(
+                "SELECT * FROM members WHERE discord_account_id == ? AND member_account_id == ?",
+                [ctx.author.id, arg.id],
+            ).fetchone()
+            is not None
+        ):
+            conn.execute(
+                "UPDATE users SET autoproxy_mode = 'member', autoproxy = ? WHERE discord_account_id == ?",
+                [arg.id, ctx.author.id],
+            )
+            conn.commit()
+            embed = discord.Embed(description=f"Autoproxy set to {arg.mention}")
+            embed.set_footer(text="Use ;;ap off to turn autoproxy off")
+        elif arg == "latch":
+            conn.execute(
+                "UPDATE users SET autoproxy_mode = 'latch', autoproxy = NULL WHERE discord_account_id == ?",
+                [ctx.author.id],
+            )
+            conn.commit()
+            embed = discord.Embed(description=f"Autoproxy set to **latch mode**")
+            embed.set_footer(text="Use ;;ap off to turn autoproxy off")
+        elif arg == "off":
+            conn.execute(
+                "UPDATE users SET autoproxy_mode = NULL WHERE discord_account_id == ?",
+                [ctx.author.id],
+            )
+            conn.commit()
+            embed = discord.Embed(description=f"Autoproxy is now **off**")
+        if embed is None and type(arg) is discord.Member:
+            embed = discord.Embed(
+                description=f"{arg.mention} is not a member of your system",
+                color=discord.Color.red(),
+            )
+        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+        await ctx.send(embed=embed)
+
     @commands.command()
     @is_polyphony_user()
     async def rolesync(self, ctx: commands.context, system_member: discord.Member):
@@ -689,4 +738,4 @@ def setup(bot):
 
 
 def teardown(bot):
-    log.warning("User module unloaded")
+    log.debug("User module unloaded")

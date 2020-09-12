@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sqlite3
 
 import discord
 from discord.ext import commands
@@ -118,6 +119,17 @@ async def reload(ctx: commands.context, reload_all=None):
                     )
                 )
             log.debug(f"{extension} reloaded")
+
+        try:
+            log.info("Re-initializing database")
+            init_db()
+        except sqlite3.OperationalError:
+            await ctx.send(
+                embed=discord.Embed(
+                    title=f"Database failed to re-initialize (i.e. upgrade)",
+                    color=discord.Color.red(),
+                )
+            )
 
         if reload_all == "all":
             await msg.edit(

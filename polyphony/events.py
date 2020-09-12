@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import time
 from datetime import timedelta
@@ -7,6 +8,7 @@ import discord
 import emoji
 from discord.ext import commands
 
+from polyphony.helpers.database import conn
 from polyphony.helpers.instances import (
     instances,
     update_presence,
@@ -30,6 +32,9 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
+        start = time.time()
+        if msg.content.startswith(COMMAND_PREFIX):
+            return
         for instance in instances:
             if instance.main_user_account_id == msg.author.id:
                 if instance.is_ready() is False:
@@ -47,8 +52,6 @@ class Events(commands.Cog):
                         )
                         await update_presence(instance)
 
-                start = time.time()
-
                 prefix_used = None
                 suffix_used = None
 
@@ -61,16 +64,55 @@ class Events(commands.Cog):
                         suffix_used = tag.get("suffix") or ""
                         break
 
+                # Get autoproxy info
+                db_user = conn.execute(
+                    "SELECT * FROM users WHERE discord_account_id == ?", [msg.author.id]
+                ).fetchone()
+                autoproxy_mode = db_user["autoproxy_mode"]
+                autoproxy = db_user["autoproxy"]
+
+                # Cancel autoproxy if prefix is used
+                # This is hacky because it was implemented later on. Probably could be more optimized.
+                if autoproxy_mode is not None and autoproxy == instance.user.id:
+                    members = conn.execute(
+                        "SELECT * FROM members WHERE discord_account_id = ?",
+                        [msg.author.id],
+                    ).fetchall()
+                    for member in members:
+                        for tag in json.loads(member["pk_proxy_tags"]):
+                            if msg.content.startswith(
+                                tag["prefix"] or ""
+                            ) and msg.content.endswith(tag["suffix"] or ""):
+                                log.debug(
+                                    f"{instance.user} ({instance.pk_member_id}): Autoproxy skipped"
+                                )
+                                autoproxy_mode = None
+
                 # Check message
                 if (
                     prefix_used is not None
                     and suffix_used is not None
                     and msg.author is not instance.user
-                    and msg.author.id == instance.main_user_account_id
+                ) or (
+                    autoproxy_mode is not None
+                    and instance.user.id == autoproxy
+                    and prefix_used is None
+                    and suffix_used is None
+                    and msg.author is not instance.user
                 ):
                     log.debug(
                         f'{instance.user} ({instance.pk_member_id}): Processing new message in {msg.channel} => "{msg.content}" (attachments: {len(msg.attachments)})'
                     )
+
+                    # Set latch autoproxy
+                    if autoproxy_mode == "latch" and (
+                        prefix_used is not None or suffix_used is not None
+                    ):
+                        conn.execute(
+                            "UPDATE users SET autoproxy = ? WHERE discord_account_id == ?",
+                            [instance.user.id, msg.author.id],
+                        )
+                        conn.commit()
 
                     # Remove prefix/suffix
                     message = msg.content[
@@ -234,4 +276,4 @@ def setup(bot):
 
 
 def teardown(bot):
-    log.warning("Events module unloaded")
+    log.debug("Events module unloaded")
