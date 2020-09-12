@@ -62,7 +62,7 @@ async def on_ready():
     """
     Execute on bot initialization with the Discord API.
     """
-    log.info(f"Polyphony ready. Started as {bot.user}.")
+    log.info(f"[POLYPHONY MAIN BOT READY] Started as {bot.user}]")
 
     # Create all member instances
     global initialized
@@ -73,7 +73,7 @@ async def on_ready():
 
 async def initialize_members():
     # Start member instances
-    log.debug("Creating member instances...")
+    log.debug("Initializing member instances...")
     members = conn.execute("SELECT * FROM members WHERE member_enabled == 1").fetchall()
     new_instance_waits = []
     if len(members) == 0:
@@ -92,7 +92,7 @@ async def initialize_members():
             new_instance_waits = []
             log.debug(f"Next batch...")
             log.info(f"{i+1}/{len(members)} members READY")
-    log.info(f"Member instances created.")
+    log.info(f"[ALL MEMBER INSTANCES READY]")
 
 
 @bot.command()
@@ -172,7 +172,7 @@ async def reload(ctx: commands.context, reload_all=None):
                     color=discord.Color.orange(),
                 )
             )
-            initialize_members()
+            await initialize_members()
             for instance in instances:
                 await msg.edit(
                     embed=discord.Embed(
