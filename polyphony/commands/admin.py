@@ -2,10 +2,8 @@
 Admin commands to configure polyphony
 """
 import asyncio
-import json
 import logging
-import sqlite3
-from typing import List, Union
+from typing import Union
 
 import discord
 from discord.ext import commands
@@ -23,6 +21,7 @@ from polyphony.helpers.instances import (
     update_presence,
 )
 from polyphony.helpers.log_message import LogMessage
+from polyphony.helpers.member_list import send_member_list
 from polyphony.helpers.pluralkit import pk_get_member
 from polyphony.settings import (
     DEFAULT_INSTANCE_PERMS,
@@ -50,7 +49,6 @@ class Admin(commands.Cog):
         list: Shows all active Polyphony members sorted by main account
 
         :param ctx: Discord Context
-        :param arg1: None/"inactive"/Discord Account
         """
         if ctx.invoked_subcommand is not None:
             return
@@ -58,7 +56,7 @@ class Admin(commands.Cog):
         c.execute("SELECT * FROM members WHERE member_enabled == 1")
         member_list = c.fetchall()
         embed = discord.Embed(title="Active Members")
-        await self.send_member_list(ctx, embed, member_list)
+        await send_member_list(ctx, embed, member_list)
 
     @list.command()
     @commands.check_any(commands.is_owner(), is_mod())
@@ -67,7 +65,7 @@ class Admin(commands.Cog):
         c.execute("SELECT * FROM members")
         member_list = c.fetchall()
         embed = discord.Embed(title="All Members")
-        await self.send_member_list(ctx, embed, member_list)
+        await send_member_list(ctx, embed, member_list)
 
     @list.command(name="system")
     @commands.check_any(commands.is_owner(), is_mod())
@@ -79,7 +77,7 @@ class Admin(commands.Cog):
         member_list = c.fetchall()
         embed = discord.Embed(title=f"Members of System")
         embed.set_author(name=f"{member} ({member.id})", icon_url=member.avatar_url)
-        await self.send_member_list(ctx, embed, member_list)
+        await send_member_list(ctx, embed, member_list)
 
     @list.command()
     @commands.check_any(commands.is_owner(), is_mod())
@@ -88,37 +86,7 @@ class Admin(commands.Cog):
         c.execute("SELECT * FROM members WHERE member_enabled == 0")
         member_list = c.fetchall()
         embed = discord.Embed(title="Suspended Members")
-        await self.send_member_list(ctx, embed, member_list)
-
-    @staticmethod
-    async def send_member_list(
-        ctx: commands.context, embed, member_list: List[sqlite3.Row]
-    ):
-        if member_list is None:
-            embed.add_field(name="No members where found")
-
-        for member in member_list:
-            if len(embed.fields) >= 9:
-                await ctx.send(embed=embed)
-                embed = discord.Embed()
-            member_user = ctx.guild.get_member(member["member_account_id"])
-            owner_user = ctx.guild.get_member(member["discord_account_id"])
-            tags = []
-            for tag in json.loads(member["pk_proxy_tags"]):
-                tags.append(
-                    "`"
-                    + (tag.get("prefix") or "")
-                    + "text"
-                    + (tag.get("suffix") or "")
-                    + "`"
-                )
-            embed.add_field(
-                name=dict(member).get("display_name", member["member_name"]),
-                value=f"""**User:** {member_user.mention} (`{member_user.id}`)\n**Account Owner:** {owner_user.mention if hasattr(owner_user, 'mention') else "*Unable to get User*"} (`{member["discord_account_id"]}`)\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Tag(s):** {' or '.join(tags)}\n**Enabled:** `{bool(member['member_enabled'])}`""",
-                inline=True,
-            )
-
-        await ctx.send(embed=embed)
+        await send_member_list(ctx, embed, member_list)
 
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())

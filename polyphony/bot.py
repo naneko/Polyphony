@@ -62,7 +62,7 @@ async def on_ready():
     """
     Execute on bot initialization with the Discord API.
     """
-    log.info(f"[POLYPHONY MAIN BOT READY] Started as {bot.user}]")
+    log.info(f"[POLYPHONY MAIN BOT READY] Started as {bot.user}")
 
     # Create all member instances
     global initialized
@@ -91,7 +91,7 @@ async def initialize_members():
             await asyncio.gather(*new_instance_waits)
             new_instance_waits = []
             log.debug(f"Next batch...")
-            log.info(f"{i+1}/{len(members)} members READY")
+            log.info(f"{i+1}/{len(members)} MEMBERS READY")
     log.info(f"[ALL MEMBER INSTANCES READY]")
 
 

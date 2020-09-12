@@ -2,7 +2,6 @@
 User commands to configure Polyphony
 """
 import asyncio
-import json
 import logging
 from datetime import timedelta
 from typing import Optional, Union
@@ -14,6 +13,7 @@ from polyphony.helpers.checks import is_polyphony_user, is_mod
 from polyphony.helpers.database import c, conn
 from polyphony.helpers.instances import instances
 from polyphony.helpers.log_message import LogMessage
+from polyphony.helpers.member_list import send_member_list
 from polyphony.settings import (
     NEVER_SYNC_ROLES,
     ALWAYS_SYNC_ROLES,
@@ -323,30 +323,7 @@ class User(commands.Cog):
         member_list = c.fetchall()
         embed = discord.Embed(title=f"Members of System")
         embed.set_author(name=f"{ctx.author}", icon_url=ctx.author.avatar_url)
-
-        if member_list is None:
-            embed.add_field(
-                name="No members where found", value="Ask a mod to add some!"
-            )
-
-        for member in member_list:
-            member_user = ctx.guild.get_member_named(f"p.{member['member_name']}")
-            tags = []
-            for tag in json.loads(member["pk_proxy_tags"]):
-                tags.append(
-                    "`"
-                    + (tag.get("prefix") or "")
-                    + "text"
-                    + (tag.get("suffix") or "")
-                    + "`"
-                )
-            embed.add_field(
-                name=dict(member).get("display_name", member["member_name"]),
-                value=f"""**User:** {member_user.mention}\n**PluralKit Member ID:** `{member['pk_member_id']}`\n**Tags:** {' or '.join(tags)}\n**Enabled:** `{'Yes' if member['member_enabled'] else 'No'}`""",
-                inline=True,
-            )
-
-        await ctx.send(embed=embed)
+        await send_member_list(ctx, embed, member_list, whoarewe=True)
 
     @commands.command()
     async def whois(self, ctx: commands.context, system_member: discord.Member):
