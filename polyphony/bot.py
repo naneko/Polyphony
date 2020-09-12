@@ -43,6 +43,12 @@ log.info("Starting member initialization...")
 # Initialize Database
 init_db()
 
+
+# Init State
+class InitState:
+    initialized = False
+
+
 # Load extensions
 log.debug("Loading default extensions...")
 if DEBUG is True:
@@ -54,8 +60,6 @@ for ext in init_extensions:
     bot.load_extension(ext)
 log.debug("Default extensions loaded.")
 
-initialized = False
-
 
 @bot.event
 async def on_ready():
@@ -65,10 +69,9 @@ async def on_ready():
     log.info(f"[POLYPHONY MAIN BOT READY] Started as {bot.user}")
 
     # Create all member instances
-    global initialized
-    if initialized is False:
+    if InitState.initialized is False:
         await initialize_members()
-        initialized = True
+        InitState.initialized = True
 
 
 async def initialize_members():
@@ -91,7 +94,7 @@ async def initialize_members():
             await asyncio.gather(*new_instance_waits)
             new_instance_waits = []
             log.debug(f"Next batch...")
-            log.info(f"{i+1}/{len(members)} MEMBERS READY")
+            log.info(f"{i + 1}/{len(members)} MEMBERS READY")
     log.info(f"[ALL MEMBER INSTANCES READY]")
 
 
