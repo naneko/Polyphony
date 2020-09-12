@@ -70,8 +70,8 @@ async def on_ready():
 
     # Create all member instances
     if InitState.initialized is False:
-        await initialize_members()
         InitState.initialized = True
+        await initialize_members()
 
 
 async def initialize_members():
