@@ -54,6 +54,8 @@ for ext in init_extensions:
     bot.load_extension(ext)
 log.debug("Default extensions loaded.")
 
+initialized = False
+
 
 @bot.event
 async def on_ready():
@@ -62,25 +64,34 @@ async def on_ready():
     """
     log.info(f"Polyphony ready. Started as {bot.user}.")
 
-    log.info(f"Updating presence of all instances")
-    for instance in instances:
-        await instance.wait_until_ready()
-        await update_presence(instance, name=bot.get_user(instance.user.id))
-    log.info(f"Presences updated")
+    # Create all member instances
+    global initialized
+    if initialized is False:
+        await initialize_members()
+        initialized = True
 
 
-def initialize_members():
+async def initialize_members():
     # Start member instances
     log.debug("Creating member instances...")
     members = conn.execute("SELECT * FROM members WHERE member_enabled == 1").fetchall()
+    new_instance_waits = []
     if len(members) == 0:
         log.info("No members found")
     for i, member in enumerate(members):
-        create_member_instance(member)
+        new_instance = create_member_instance(member)
+        new_instance_waits.append(new_instance.wait_until_ready())
+        new_instance_waits.append(
+            update_presence(
+                new_instance, name=bot.get_user(new_instance.main_user_account_id),
+            )
+        )
+        if (i + 1) % 10 == 0 or i - 1 >= len(members):
+            log.debug(f"Waiting for batch (Continue on {i}/{len(members)})")
+            await asyncio.gather(*new_instance_waits)
+            new_instance_waits = []
+            log.debug(f"Next batch... (Continue on {i}/{len(members)})")
     log.info(f"Member instances created.")
-
-
-initialize_members()
 
 
 @bot.command()
