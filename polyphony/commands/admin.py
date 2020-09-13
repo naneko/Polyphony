@@ -371,11 +371,12 @@ class Admin(commands.Cog):
             for i, instance in enumerate(instances):
                 if instance.user.id in check:
                     await instance.close()
-                    instances.pop(i)
                     await logger.log(f"{instance.user.mention} deduplicated")
                     log.info(f"{instance.user} deduplicated")
                 else:
                     check.append(instance.user.id)
+        instances.clear()
+        instances.extend(check)
         logger.title = ":white_check_mark: Deduplication Complete"
         logger.color = discord.Color.green()
         await logger.update()
@@ -414,7 +415,7 @@ class Admin(commands.Cog):
         """
         # TODO: Provide more verbose feedback from command
         await ctx.message.delete()
-        for i, instance in enumerate(instances):
+        for instance in instances:
             if instance.user.id == system_member.id:
                 await instance.change_presence(
                     status=discord.Status.offline, activity=None
@@ -425,7 +426,7 @@ class Admin(commands.Cog):
                         "UPDATE members SET member_enabled = 0 WHERE token = ?",
                         [instance.get_token()],
                     )
-                instances.pop(i)
+                instances.remove(instance)
                 await ctx.send(
                     f"{system_member.mention} suspended by {ctx.author.mention}"
                 )

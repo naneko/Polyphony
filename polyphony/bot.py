@@ -159,9 +159,9 @@ async def reload(ctx: commands.context, reload_all=None):
             )
             log.info("Reloading instances")
             to_close = []
-            for i, instance in enumerate(instances):
+            for instance in instances:
                 to_close.append(instance.close())
-                instances.pop(i)
+                instances.remove(instance)
             await asyncio.gather(*to_close)
             await msg.edit(
                 embed=discord.Embed(

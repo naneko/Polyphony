@@ -264,7 +264,7 @@ class PolyphonyInstance(discord.Client):
                             "UPDATE members SET member_enabled = 0 WHERE token = ?",
                             [self.get_token()],
                         )
-                    instances.pop(i)
+                    instances.remove(instance)
             return 1
 
         elif await self.check_if_not_in_guild():

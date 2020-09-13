@@ -65,7 +65,7 @@ class Debug(commands.Cog):
     @commands.is_owner()
     async def deregister(self, ctx: commands.context, member: discord.Member):
         with ctx.channel.typing():
-            for i, instance in enumerate(instances):
+            for instance in instances:
                 if instance.user.id == member.id:
                     instance.member_name = f"{random.randint(0000, 9999)}"
                     instance.nickname = ""
@@ -90,7 +90,7 @@ class Debug(commands.Cog):
                         status=discord.Status.offline, activity=None
                     )
                     await instance.close()
-                    instances.pop(i)
+                    instances.remove(instance)
                     await ctx.channel.send(
                         f"`POLYPHONY SYSTEM UTILITIES` {member.mention} has been deregistered and the token has been made available"
                     )
