@@ -369,13 +369,13 @@ class Admin(commands.Cog):
             logger.color = discord.Color.orange()
             check = []
             for i, instance in enumerate(instances):
-                if instance in check:
+                if instance.user.id in check:
                     await instance.close()
                     instances.pop(i)
                     await logger.log(f"{instance.user.mention} deduplicated")
-                    log.info(f"{instance.user.mention} deduplicated")
+                    log.info(f"{instance.user} deduplicated")
                 else:
-                    check.append(instance)
+                    check.append(instance.user.id)
         logger.title = ":white_check_mark: Deduplication Complete"
         logger.color = discord.Color.green()
         await logger.update()
