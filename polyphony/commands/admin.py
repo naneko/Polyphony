@@ -363,6 +363,25 @@ class Admin(commands.Cog):
 
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
+    async def deduplicate(self, ctx: commands.context):
+        with ctx.channel.typing():
+            logger = LogMessage(ctx, title=f":hourglass: Deduplicating")
+            logger.color = discord.Color.orange()
+            check = []
+            for i, instance in enumerate(instances):
+                if instance in check:
+                    await instance.close()
+                    instances.pop(i)
+                    await logger.log(f"{instance.user.mention} deduplicated")
+                    log.info(f"{instance.user.mention} deduplicated")
+                else:
+                    check.append(instance)
+        logger.title = ":white_check_mark: Deduplication Complete"
+        logger.color = discord.Color.green()
+        await logger.update()
+
+    @commands.command()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def invite(self, ctx: commands.context, member: Union[int, discord.Member]):
         """
         Generates an invite link with pre-set permissions from a client ID.
