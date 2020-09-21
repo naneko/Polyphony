@@ -1,7 +1,5 @@
 """
 Contains all database functions.
-
-SQL should only exist in this file
 """
 import json
 import logging

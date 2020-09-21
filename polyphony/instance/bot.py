@@ -259,11 +259,11 @@ class PolyphonyInstance(discord.Client):
                         status=discord.Status.offline, activity=None
                     )
                     await self.close()
-                    with conn:
-                        c.execute(
-                            "UPDATE members SET member_enabled = 0 WHERE token = ?",
-                            [self.get_token()],
-                        )
+                    conn.execute(
+                        "UPDATE members SET member_enabled = 0 WHERE token = ?",
+                        [self.get_token()],
+                    )
+                    conn.commit()
                     instances.remove(instance)
             return 1
 

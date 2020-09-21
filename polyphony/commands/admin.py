@@ -421,11 +421,11 @@ class Admin(commands.Cog):
                     status=discord.Status.offline, activity=None
                 )
                 await instance.close()
-                with conn:
-                    c.execute(
-                        "UPDATE members SET member_enabled = 0 WHERE token = ?",
-                        [instance.get_token()],
-                    )
+                conn.execute(
+                    "UPDATE members SET member_enabled = 0 WHERE token = ?",
+                    [instance.get_token()],
+                )
+                conn.commit()
                 instances.remove(instance)
                 await ctx.send(
                     f"{system_member.mention} suspended by {ctx.author.mention}"
@@ -488,10 +488,10 @@ class Admin(commands.Cog):
             await confirmation.confirm(f"Disable member {system_member} permanently?")
             if confirmation.confirmed:
                 await confirmation.message.delete()
-                with conn:
-                    c.execute(
-                        "DELETE FROM members WHERE token = ?", [instance["token"]],
-                    )
+                conn.execute(
+                    "DELETE FROM members WHERE token = ?", [instance["token"]],
+                )
+                conn.commit()
                 await self.suspend(ctx, system_member)
                 await ctx.send(
                     f"{system_member.mention} disabled permanently by {ctx.message.author.mention}"
