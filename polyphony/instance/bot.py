@@ -69,8 +69,6 @@ class PolyphonyInstance(discord.Client):
         """Execute on bot initialization with the Discord API."""
         log.debug(f"[STARTUP]     {self.user} ({self.pk_member_id})")
 
-        await self.check_for_invalid_states()
-
         # Update Self ID in Database
         with conn:
             log.debug(
