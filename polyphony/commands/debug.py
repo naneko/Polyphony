@@ -123,7 +123,9 @@ class Debug(commands.Cog):
                     if instance.user is None:
                         instance_queue.append(self.restart_helper(instance))
             await asyncio.gather(*instance_queue)
-            await ctx.send("Finished attempting to restart stagnant instances")
+            await ctx.send(
+                "`POLYPHONY SYSTEM UTILITIES` Finished attempting to restart stagnant instances"
+            )
             log.info("Finished attempting to restart stagnant instances")
             return
         if system_member == "all":
@@ -133,7 +135,9 @@ class Debug(commands.Cog):
                 for i, instance in enumerate(instances):
                     instance_queue.append(self.restart_helper(instance))
             await asyncio.gather(*instance_queue)
-            await ctx.send("Finished attempting to restart all instances")
+            await ctx.send(
+                "`POLYPHONY SYSTEM UTILITIES` Finished attempting to restart all instances"
+            )
             log.info("Finished attempting to restart all instances")
             return
         if system_member == "presence":
@@ -167,7 +171,9 @@ class Debug(commands.Cog):
                     await update_presence(
                         instance, name=self.bot.get_user(instance.user.id)
                     )
-                    await ctx.send(f"{system_member.mention} restarted")
+                    await ctx.send(
+                        f"`POLYPHONY SYSTEM UTILITIES` {system_member.mention} restarted"
+                    )
 
                     log.info(f"{system_member} restarted")
                     break
@@ -181,6 +187,15 @@ class Debug(commands.Cog):
         await update_presence(
             instance, name=self.bot.get_user(instance.main_user_account_id)
         )
+
+    @commands.command()
+    @commands.is_owner()
+    async def statecheck(self, ctx: commands.context):
+        state_check = []
+        for instance in instances:
+            state_check.append(instance.check_for_invalid_states())
+            await asyncio.gather(*state_check)
+        await ctx.channel.send("`POLYPHONY SYSTEM UTILITIES` State check complete")
 
 
 def setup(bot: commands.bot):
