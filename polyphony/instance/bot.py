@@ -252,7 +252,7 @@ class PolyphonyInstance(discord.Client):
 
             # TODO: Change instance array to be dict instead to allow direct access instead of iterative access
             for i, instance in enumerate(instances):
-                if (instance.user.id or 0) == self.user.id:
+                if instance.user.id == self.user.id:
                     await self.change_presence(
                         status=discord.Status.offline, activity=None
                     )

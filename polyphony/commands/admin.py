@@ -368,13 +368,15 @@ class Admin(commands.Cog):
             logger = LogMessage(ctx, title=f":hourglass: Deduplicating")
             logger.color = discord.Color.orange()
             check = []
+            check_id = []
             for i, instance in enumerate(instances):
-                if instance.user.id in check:
+                if instance.user.id in check_id:
                     await instance.close()
                     await logger.log(f"{instance.user.mention} deduplicated")
                     log.info(f"{instance.user} deduplicated")
                 else:
-                    check.append(instance.user.id)
+                    check.append(instance)
+                    check_id.append(instance.user.id)
         instances.clear()
         instances.extend(check)
         logger.title = ":white_check_mark: Deduplication Complete"

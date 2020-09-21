@@ -157,7 +157,7 @@ class Debug(commands.Cog):
             await ctx.send("Done")
             return
         for i, instance in enumerate(instances):
-            if (instance.user.id or 0) == system_member.id:
+            if instance.user.id == system_member.id:
                 with ctx.channel.typing():
                     log.info(f"{system_member} restarting...")
                     instance.clear()
