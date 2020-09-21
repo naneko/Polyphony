@@ -191,10 +191,8 @@ class Debug(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def statecheck(self, ctx: commands.context):
-        state_check = []
         for instance in instances:
-            state_check.append(instance.check_for_invalid_states())
-            await asyncio.gather(*state_check)
+            await instance.check_for_invalid_states()
         await ctx.channel.send("`POLYPHONY SYSTEM UTILITIES` State check complete")
 
 

@@ -99,10 +99,8 @@ async def initialize_members():
             log.debug(f"Next batch...")
             log.info(f"{i + 1}/{len(members)} MEMBERS READY")
     log.info("Checking for invalid states")
-    state_check = []
     for instance in instances:
-        state_check.append(instance.check_for_invalid_states())
-        await asyncio.gather(*state_check)
+        await instance.check_for_invalid_states()
     log.info(f"[ALL MEMBER INSTANCES READY]")
 
 
