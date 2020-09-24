@@ -180,7 +180,7 @@ class Admin(commands.Cog):
                     await logger.log(
                         f"{account.mention} is a new user! Registering them with Polyphony"
                     )
-                    conn.execute("INSERT INTO users VALUES(?)", [account.id])
+                    conn.execute("INSERT INTO users VALUES (?, NULL, NULL)", [account.id])
                     conn.commit()
 
                 # Insert member unless already registered
