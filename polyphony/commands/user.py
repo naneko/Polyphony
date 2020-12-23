@@ -11,22 +11,22 @@ from discord.ext import commands
 
 from polyphony.helpers.checks import is_polyphony_user, is_mod
 from polyphony.helpers.database import c, conn
-from polyphony.helpers.instances import instances
-from polyphony.helpers.log_message import LogMessage
 from polyphony.helpers.member_list import send_member_list
+from polyphony.helpers.sync import sync
+from polyphony.instance.bot import PolyphonyInstance
 from polyphony.settings import (
     NEVER_SYNC_ROLES,
     ALWAYS_SYNC_ROLES,
     DISABLE_ROLESYNC_ROLES,
+    TOKEN,
 )
 
 log = logging.getLogger("polyphony." + __name__)
 
+# TODO: Add more delete_after cleaning
+
 
 class User(commands.Cog):
-
-    # TODO: Slots command: will show how many tokens are available. (maybe also show with register command)
-
     def __init__(self, bot: discord.ext.commands.bot):
         self.bot = bot
 
@@ -256,29 +256,12 @@ class User(commands.Cog):
         """
         if ctx.invoked_subcommand is not None:
             return
-        logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
-        logger.color = discord.Color.orange()
-        for instance in instances:
-            try:
-                if instance.main_user_account_id == ctx.author.id:
-                    await logger.log(f":hourglass: Syncing {instance.user.mention}...")
-                    try:
-                        await instance.sync()
-                        logger.content[
-                            -1
-                        ] = f":white_check_mark: Synced {instance.user.mention}"
-                    except TypeError:
-                        logger.content[
-                            -1
-                        ] = f":x: Failed to sync {instance.user.mention}"
-            except AttributeError as e:
-                log.error(e)
-                await logger.log(
-                    f":x: Failed to sync {instance.member_name} ({instance.pk_member_id}) due to an unknown error."
-                )
-        logger.title = ":white_check_mark: Sync Complete"
-        logger.color = discord.Color.green()
-        await logger.update()
+        await sync(
+            ctx,
+            conn.execute(
+                "SELECT * FROM members WHERE main_account_id = ?", [ctx.author.id]
+            ).fetchall(),
+        )
 
     @sync.command()
     @is_polyphony_user()
@@ -289,24 +272,12 @@ class User(commands.Cog):
         :param system_member: User to sync
         :param ctx: Discord Context
         """
-        logger = LogMessage(ctx, title=f":hourglass: Syncing {system_member}...")
-        logger.color = discord.Color.orange()
-        for instance in instances:
-            if (
-                instance.user.id == system_member.id
-                and instance.main_user_account_id == ctx.author.id
-            ):
-                await logger.log(f":hourglass: Syncing {instance.user.mention}...")
-                try:
-                    await instance.sync()
-                    logger.content[
-                        -1
-                    ] = f":white_check_mark: Synced {instance.user.mention}"
-                except TypeError:
-                    logger.content[-1] = f":x: Failed to sync {instance.user.mention}"
-        logger.title = ":white_check_mark: Sync Complete"
-        logger.color = discord.Color.green()
-        await logger.update()
+        await sync(
+            ctx,
+            conn.execute(
+                "SELECT * FROM members WHERE id = ?", [system_member.id]
+            ).fetchall(),
+        )
 
     @commands.command()
     @is_polyphony_user()
@@ -318,7 +289,7 @@ class User(commands.Cog):
         """
         log.debug(f"Listing members for {ctx.author.display_name}...")
         c.execute(
-            "SELECT * FROM members WHERE discord_account_id == ?", [ctx.author.id],
+            "SELECT * FROM members WHERE main_account_id == ?", [ctx.author.id],
         )
         member_list = c.fetchall()
         embed = discord.Embed(title=f"Members of System")
@@ -327,61 +298,65 @@ class User(commands.Cog):
 
     @commands.command()
     async def whois(self, ctx: commands.context, system_member: discord.Member):
-        c.execute(
-            "SELECT * FROM members WHERE member_account_id == ?", [system_member.id]
-        )
+        c.execute("SELECT * FROM members WHERE id == ?", [system_member.id])
         member = c.fetchone()
         embed = discord.Embed(
-            description=f"{system_member.mention} is part of the {self.bot.get_user(member['discord_account_id']).mention} system",
+            description=f"{system_member.mention} is part of the {self.bot.get_user(member['main_account_id']).mention} system",
         )
-        embed.add_field(
-            name="User ID", value=self.bot.get_user(member["member_account_id"]).id
-        )
+        embed.add_field(name="User ID", value=self.bot.get_user(member["id"]).id)
         embed.add_field(
             name="System Owner ID",
-            value=self.bot.get_user(member["discord_account_id"]).id,
+            value=self.bot.get_user(member["main_account_id"]).id,
         )
-        embed.set_thumbnail(
-            url=self.bot.get_user(member["member_Account_id"]).avatar_url
-        )
+        embed.set_thumbnail(url=self.bot.get_user(member["id"]).avatar_url)
         await ctx.channel.send(embed=embed)
 
     @commands.command()
     @is_polyphony_user()
     async def nick(
-        self, ctx: commands.context, member: discord.Member, *, nickname: str = None
+        self, ctx: commands.context, ctx_member: discord.Member, *, nickname: str = ""
     ):
-        if (
-            conn.execute(
-                "SELECT * FROM members WHERE discord_account_id == ? AND member_account_id == ?",
-                [ctx.author.id, member.id],
-            ).fetchone()
-            is not None
-        ):
-            if len(nickname or "") > 32:
-                embed = discord.Embed(
-                    title=f"**Could not update nickname**\n",
-                    description=f"Nickname `{(nickname[:42] + '...') if len(nickname or '') > 42 else nickname}` is too long",
-                    color=discord.Color.red(),
+        member = conn.execute(
+            "SELECT * FROM members WHERE main_account_id == ? AND id == ?",
+            [ctx.author.id, ctx_member.id],
+        ).fetchone()
+        if member is not None:
+            with ctx.typing():
+                # Create instance
+                instance = PolyphonyInstance(member["pk_member_id"])
+                asyncio.run_coroutine_threadsafe(
+                    instance.start(member["token"]), self.bot.loop
                 )
-                embed.set_author(name=member.display_name, icon_url=member.avatar_url)
-                embed.set_footer(text="Nicknames must be 32 characters or less")
+                await instance.wait_until_ready()
+
+                out = await instance.update_nickname(nickname)
+
+                await instance.close()
+
+                if out < 0:
+                    embed = discord.Embed(
+                        title=f"**Could not update nickname**\n",
+                        description=f"Nickname `{(nickname[:42] + '...') if len(nickname or '') > 42 else nickname}` is too long",
+                        color=discord.Color.red(),
+                    )
+                    embed.set_author(
+                        name=ctx_member.display_name, icon_url=ctx_member.avatar_url
+                    )
+                    embed.set_footer(text="Nicknames must be 32 characters or less")
+                else:
+                    embed = discord.Embed(
+                        description=f"Nickname updated for {ctx_member.mention}",
+                        color=discord.Color.green(),
+                    )
+                    embed.set_author(
+                        name=ctx_member.display_name, icon_url=ctx_member.avatar_url
+                    )
+                    if out > 0:
+                        embed.set_footer(
+                            text="With errors: did not update in all guilds"
+                        )
+
                 await ctx.channel.send(embed=embed)
-                return
-            for instance in instances:
-                if instance.is_ready():
-                    if instance.user.id == member.id:
-                        instance.nickname = nickname
-                        await instance.push_nickname_updates()
-                        embed = discord.Embed(
-                            description=f"Nickname updated for {member.mention}",
-                            color=discord.Color.green(),
-                        )
-                        embed.set_author(
-                            name=member.display_name, icon_url=member.avatar_url
-                        )
-                        await ctx.channel.send(embed=embed)
-                        break
 
     @commands.command()
     @commands.check_any(is_mod(), is_polyphony_user(), commands.is_owner())
@@ -391,24 +366,27 @@ class User(commands.Cog):
 
         :param ctx: Discord Context
         """
+        await ctx.message.delete()
         await ctx.send(
-            embed=discord.Embed(title=f"Pong ({timedelta(seconds=self.bot.latency)})")
+            embed=discord.Embed(title=f"Pong ({timedelta(seconds=self.bot.latency)})"),
+            delete_after=10,
         )
 
     @commands.command(aliases=["ap"])
     @is_polyphony_user()
     async def autoproxy(self, ctx: commands.context, arg: Union[discord.Member, str]):
+        await ctx.message.delete()
         embed = None
         if (
             type(arg) is discord.Member
             and conn.execute(
-                "SELECT * FROM members WHERE discord_account_id == ? AND member_account_id == ?",
+                "SELECT * FROM members WHERE main_account_id == ? AND id == ?",
                 [ctx.author.id, arg.id],
             ).fetchone()
             is not None
         ):
             conn.execute(
-                "UPDATE users SET autoproxy_mode = 'member', autoproxy = ? WHERE discord_account_id == ?",
+                "UPDATE users SET autoproxy_mode = 'member', autoproxy = ? WHERE id == ?",
                 [arg.id, ctx.author.id],
             )
             conn.commit()
@@ -416,7 +394,7 @@ class User(commands.Cog):
             embed.set_footer(text="Use ;;ap off to turn autoproxy off")
         elif arg == "latch":
             conn.execute(
-                "UPDATE users SET autoproxy_mode = 'latch', autoproxy = NULL WHERE discord_account_id == ?",
+                "UPDATE users SET autoproxy_mode = 'latch', autoproxy = NULL WHERE id == ?",
                 [ctx.author.id],
             )
             conn.commit()
@@ -424,8 +402,7 @@ class User(commands.Cog):
             embed.set_footer(text="Use ;;ap off to turn autoproxy off")
         elif arg == "off":
             conn.execute(
-                "UPDATE users SET autoproxy_mode = NULL WHERE discord_account_id == ?",
-                [ctx.author.id],
+                "UPDATE users SET autoproxy_mode = NULL WHERE id == ?", [ctx.author.id],
             )
             conn.commit()
             embed = discord.Embed(description=f"Autoproxy is now **off**")
@@ -435,7 +412,7 @@ class User(commands.Cog):
                 color=discord.Color.red(),
             )
         embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, delete_after=10)
 
     @commands.command()
     @is_polyphony_user()
@@ -452,7 +429,7 @@ class User(commands.Cog):
             # Don't execute if has role that disables rolesync
             return
         c.execute(
-            "SELECT * FROM members WHERE discord_account_id == ? AND member_account_id == ?",
+            "SELECT * FROM members WHERE main_account_id == ? AND id == ?",
             [ctx.author.id, system_member.id],
         )
         if c.fetchone():
@@ -631,36 +608,35 @@ class User(commands.Cog):
         """
         await ctx.message.delete()
         if message is not None:
-            log.debug(
-                f"Editing message {message.id} by {message.author} for {ctx.author}"
-            )
-            c.execute(
-                "SELECT * FROM members WHERE discord_account_id == ? AND member_account_id == ?",
+            member = conn.execute(
+                "SELECT * FROM members WHERE main_account_id == ? AND id == ? AND member_enabled = 1",
                 [ctx.author.id, message.author.id],
-            )
-            if c.fetchone():
-                for instance in instances:
-                    if instance.user.id == message.author.id:
-                        message = await instance.get_channel(
-                            message.channel.id
-                        ).fetch_message(message.id)
-                        await message.edit(content=content)
-                        break
+            ).fetchone()
+            if member:
+                log.debug(
+                    f"Editing message {message.id} by {message.author} for {ctx.author}"
+                )
+                message = await self.bot.get_channel(message.channel.id).fetch_message(
+                    message.id
+                )
+                self.bot.http.token = member["token"]
+                await message.edit(content=content)
+                self.bot.http.token = TOKEN
         else:
             log.debug(f"Editing last Polyphony message for {ctx.author}")
-            c.execute(
-                "SELECT * FROM members WHERE discord_account_id == ?", [ctx.author.id],
-            )
-            member_ids = [member["member_account_id"] for member in c.fetchall()]
+            member_ids = [
+                member["id"]
+                for member in conn.execute(
+                    "SELECT * FROM members WHERE main_account_id == ?", [ctx.author.id],
+                ).fetchall()
+            ]
             async for message in ctx.channel.history():
                 if message.author.id in member_ids:
-                    for instance in instances:
-                        if instance.user.id == message.author.id:
-                            message = await instance.get_channel(
-                                message.channel.id
-                            ).fetch_message(message.id)
-                            await message.edit(content=content)
-                            break
+                    self.bot.http.token = conn.execute(
+                        "SELECT * FROM members WHERE id == ?", [message.author.id],
+                    ).fetchone()["token"]
+                    await message.edit(content=content)
+                    self.bot.http.token = TOKEN
                     break
 
     @commands.command(name="del")
@@ -676,36 +652,29 @@ class User(commands.Cog):
         """
         await ctx.message.delete()
         if message is not None:
-            log.debug(
-                f"Deleting message {message.id} by {message.author} for {ctx.author}"
-            )
-            c.execute(
-                "SELECT * FROM members WHERE discord_account_id == ? AND member_account_id == ?",
+            member = conn.execute(
+                "SELECT * FROM members WHERE main_account_id == ? AND id == ? AND member_enabled = 1",
                 [ctx.author.id, message.author.id],
-            )
-            if c.fetchone():
-                for instance in instances:
-                    if instance.user.id == message.author.id:
-                        message = await instance.get_channel(
-                            message.channel.id
-                        ).fetch_message(message.id)
-                        await message.delete()
-                        break
+            ).fetchone()
+            if member:
+                log.debug(
+                    f"Deleting message {message.id} by {message.author} for {ctx.author}"
+                )
+                message = await self.bot.get_channel(message.channel.id).fetch_message(
+                    message.id
+                )
+                await message.delete()
         else:
             log.debug(f"Deleting last Polyphony message for {ctx.author}")
-            c.execute(
-                "SELECT * FROM members WHERE discord_account_id == ?", [ctx.author.id],
-            )
-            member_ids = [member["member_account_id"] for member in c.fetchall()]
+            member_ids = [
+                member["id"]
+                for member in conn.execute(
+                    "SELECT * FROM members WHERE main_account_id == ?", [ctx.author.id],
+                ).fetchall()
+            ]
             async for message in ctx.channel.history():
                 if message.author.id in member_ids:
-                    for instance in instances:
-                        if instance.user.id == message.author.id:
-                            message = await instance.get_channel(
-                                message.channel.id
-                            ).fetch_message(message.id)
-                            await message.delete()
-                            break
+                    await message.delete()
                     break
 
 

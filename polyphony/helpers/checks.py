@@ -36,7 +36,7 @@ def is_polyphony_user():
     # TODO: Add error message that self deletes
     async def predicate(ctx: commands.context):
         user = conn.execute(
-            "SELECT * FROM users WHERE discord_account_id = ?", [ctx.author.id]
+            "SELECT * FROM users WHERE id = ?", [ctx.author.id]
         ).fetchone()
         if user is not None:
             return True

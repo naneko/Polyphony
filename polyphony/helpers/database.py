@@ -14,7 +14,7 @@ c = conn.cursor()
 
 log = logging.getLogger(__name__)
 
-schema_version = 2
+schema_version = 3
 
 
 def init_db():
@@ -44,8 +44,8 @@ def init_db():
 def insert_member(
     token: str,
     pk_member_id: str,
-    discord_account_id: int,
-    member_account_id: int,
+    main_account_id: int,
+    id: int,
     member_name: str,
     display_name: str,
     pk_avatar_url: str,
@@ -59,8 +59,8 @@ def insert_member(
         [
             token,
             pk_member_id,
-            discord_account_id,
-            member_account_id,
+            main_account_id,
+            id,
             member_name,
             display_name,
             pk_avatar_url,

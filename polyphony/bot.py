@@ -1,17 +1,10 @@
-import asyncio
 import logging
 import sqlite3
 
 import discord
 from discord.ext import commands
 
-from .helpers.database import init_db, conn
-from .helpers.instances import (
-    create_member_instance,
-    instances,
-    update_presence,
-    reload_instance_module,
-)
+from .helpers.database import init_db
 from .settings import (
     TOKEN,
     DEBUG,
@@ -21,7 +14,8 @@ from .settings import (
 log = logging.getLogger(__name__)
 
 # Main Polyhony Bot Instance
-bot = commands.Bot(command_prefix=COMMAND_PREFIX)
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
 
 # Disable default help
 bot.remove_command("help")
@@ -29,11 +23,8 @@ bot.remove_command("help")
 # Default Cog Extensions to be loaded
 init_extensions = ["commands.admin", "commands.user", "commands.debug", "events"]
 
-# TODO: Better Help Messages
+# TODO: Better Help System (look at Blimp's)
 # TODO: ON_ERROR() handling
-# TODO: general polyphony channel logging module
-# TODO: Send redirect note on DM
-# TODO: Allow setting nickname override that isn't display_name
 # TODO: Autoproxy (sync up typing status if possible)
 
 log.info("Polyphony is starting...")
@@ -42,12 +33,6 @@ log.info("Starting member initialization...")
 
 # Initialize Database
 init_db()
-
-
-# Init State
-class InitState:
-    initialized = False
-
 
 # Load extensions
 log.debug("Loading default extensions...")
@@ -67,41 +52,6 @@ async def on_ready():
     Execute on bot initialization with the Discord API.
     """
     log.info(f"[POLYPHONY MAIN BOT READY] Started as {bot.user}")
-
-    # Create all member instances
-    if InitState.initialized is False:
-        InitState.initialized = True
-        await initialize_members()
-
-
-async def initialize_members():
-    # Start member instances
-    log.debug("Initializing member instances...")
-    members = conn.execute("SELECT * FROM members WHERE member_enabled == 1").fetchall()
-    new_instance_waits = []
-    new_instance_presence = []
-    if len(members) == 0:
-        log.info("No members found")
-    for i, member in enumerate(members):
-        new_instance = create_member_instance(member)
-        new_instance_waits.append(new_instance.wait_until_ready())
-        new_instance_presence.append(
-            update_presence(
-                new_instance, name=bot.get_user(new_instance.main_user_account_id),
-            )
-        )
-        if (i + 1) % 10 == 0 or i + 1 >= len(members):
-            log.debug(f"Waiting for batch (Continue on {i + 1}/{len(members)})")
-            await asyncio.gather(*new_instance_waits)
-            await asyncio.gather(*new_instance_presence)
-            new_instance_waits = []
-            new_instance_presence = []
-            log.debug(f"Next batch...")
-            log.info(f"{i + 1}/{len(members)} MEMBERS READY")
-    log.info("Checking for invalid states")
-    for instance in instances:
-        await instance.check_for_invalid_states()
-    log.info(f"[ALL MEMBER INSTANCES READY]")
 
 
 @bot.command()
@@ -151,48 +101,6 @@ async def reload(ctx: commands.context, reload_all=None):
                     color=discord.Color.red(),
                 )
             )
-
-        if reload_all == "all":
-            await msg.edit(
-                embed=discord.Embed(
-                    title="Reloading instances with updated module...",
-                    description="Shutting down instances...",
-                    color=discord.Color.orange(),
-                )
-            )
-            log.info("Reloading instances")
-            to_close = []
-            for instance in instances:
-                to_close.append(instance.close())
-                instances.remove(instance)
-            await asyncio.gather(*to_close)
-            await msg.edit(
-                embed=discord.Embed(
-                    title="Reloading instances with updated module...",
-                    description="Reloading instance module...",
-                    color=discord.Color.orange(),
-                )
-            )
-            reload_instance_module()
-            await msg.edit(
-                embed=discord.Embed(
-                    title="Reloading instances with updated module...",
-                    description="Restarting member instances...",
-                    color=discord.Color.orange(),
-                )
-            )
-            await initialize_members()
-            for instance in instances:
-                await msg.edit(
-                    embed=discord.Embed(
-                        title="Reloading instances with updated module...",
-                        description=f"Restarting member instances...\nWaiting on {instance.member_name}...",
-                        color=discord.Color.orange(),
-                    )
-                )
-                await instance.wait_until_ready()
-                await update_presence(instance, name=bot.get_user(instance.user.id))
-            log.info("Instances reloaded")
 
         await msg.delete()
         await ctx.send(
