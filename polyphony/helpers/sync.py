@@ -40,7 +40,7 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
             logger.content[
                 -1
             ] = f":x: Failed to sync {instance.user.mention} from PluralKit"
-            log.warning(f"Failed to sync {instance.user}")
+            log.debug(f"Failed to sync {instance.user}")
             await instance.close()
             continue
 
@@ -67,17 +67,18 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
 
         # Update Avatar URL
         # TODO: Download both images and compare and skip if they are the same?
-        await logger.edit(
-            -1,
-            f":hourglass: Syncing {instance.user.mention} Avatar... ({i}/{len(query)})",
-        )
-        conn.execute(
-            "UPDATE members SET pk_avatar_url = ? WHERE pk_member_id = ?",
-            [pk_member.get("avatar_url"), member["pk_member_id"]],
-        )
-        out = await instance.update_avatar(pk_member.get("avatar_url"))
-        if out != 0:
-            error_text += f"> {out}\n"
+        if pk_member.get("avatar_url") is not None:
+            await logger.edit(
+                -1,
+                f":hourglass: Syncing {instance.user.mention} Avatar... ({i}/{len(query)})",
+            )
+            conn.execute(
+                "UPDATE members SET pk_avatar_url = ? WHERE pk_member_id = ?",
+                [pk_member.get("avatar_url"), member["pk_member_id"]],
+            )
+            out = await instance.update_avatar(pk_member.get("avatar_url"))
+            if out != 0:
+                error_text += f"> {out}\n"
 
         # Update Nickname
         # Check if nickname is set
