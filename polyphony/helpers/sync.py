@@ -37,9 +37,9 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
         # Pull from PluralKit
         pk_member = await pk_get_member(member["pk_member_id"])
         if pk_member is None:
-            logger.content[
-                -1
-            ] = f":x: Failed to sync {instance.user.mention} from PluralKit"
+            await logger.edit(
+                -1, f":x: Failed to sync {instance.user.mention} from PluralKit"
+            )
             log.debug(f"Failed to sync {instance.user}")
             await instance.close()
             continue
@@ -107,8 +107,7 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
                 error_text += f"> Nick didn't update on {out} guild(s)\n"
 
         if error_text == "":
-            logger.content[-1] = f":white_check_mark: Synced {instance.user.mention}"
-            await logger.update()
+            await logger.edit(-1, f":white_check_mark: Synced {instance.user.mention}")
         else:
             logger.content[
                 -1
@@ -119,6 +118,4 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
 
         await instance.close()
 
-    logger.title = ":white_check_mark: Sync Complete"
-    logger.color = discord.Color.green()
-    await logger.update()
+    await logger.set(":white_check_mark: Sync Complete", discord.Color.green())
