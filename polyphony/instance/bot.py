@@ -21,7 +21,9 @@ class PolyphonyInstance(discord.Client):
     """Polyphony Member Instance."""
 
     def __init__(
-        self, pk_member_id: str, **options,
+        self,
+        pk_member_id: str,
+        **options,
     ):
         """
         Creates Polyphony Member Instance
@@ -52,6 +54,9 @@ class PolyphonyInstance(discord.Client):
 
         log.info(f"[READY] {self.user} ({self.pk_member_id})")
 
+    async def on_disconnect(self):
+        log.info(f"[DISCONNECTED] {self.user} ({self.pk_member_id})")
+
     async def update_username(self, name):
         log.debug(f"{self.user} ({self.pk_member_id}): Updating username")
         if len(name or "") > 32:
@@ -81,7 +86,7 @@ class PolyphonyInstance(discord.Client):
             avatar = requests.get(url).content
             log.debug(f"{self.user} ({self.pk_member_id}): Updating Avatar")
             if no_timeout:
-                # await self.user.edit(avatar=avatar)
+                await self.user.edit(avatar=avatar)
                 pass
             else:
                 await asyncio.wait_for(self.user.edit(avatar=avatar), 10)
@@ -96,6 +101,8 @@ class PolyphonyInstance(discord.Client):
                 return "An unknown error occurred while updating avatar"
         except asyncio.TimeoutError:
             return "Avatar not updated because Discord took too long"
+        except discord.errors.InvalidArgument:
+            return "Avatar image type is invalid"
 
     async def update_default_roles(self):
         log.debug(f"{self.user} ({self.pk_member_id}): Updating default roles")

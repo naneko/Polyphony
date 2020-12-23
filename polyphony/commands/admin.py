@@ -74,7 +74,8 @@ class Admin(commands.Cog):
     async def _system(self, ctx: commands.context, member: discord.Member):
         log.debug(f"Listing members for {member.display_name}...")
         c.execute(
-            "SELECT * FROM members WHERE main_account_id == ?", [member.id],
+            "SELECT * FROM members WHERE main_account_id == ?",
+            [member.id],
         )
         member_list = c.fetchall()
         embed = discord.Embed(title=f"Members of System")
@@ -93,7 +94,10 @@ class Admin(commands.Cog):
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
     async def register(
-        self, ctx: commands.context, pluralkit_member_id: str, account: discord.Member,
+        self,
+        ctx: commands.context,
+        pluralkit_member_id: str,
+        account: discord.Member,
     ):
         """
         Creates a new Polyphony member instance
@@ -193,7 +197,8 @@ class Admin(commands.Cog):
 
             # Error: Invalid ID
             check_duplicate = conn.execute(
-                "SELECT * FROM members WHERE pk_member_id == ?", [pluralkit_member_id],
+                "SELECT * FROM members WHERE pk_member_id == ?",
+                [pluralkit_member_id],
             ).fetchone()
             if check_duplicate:
                 logger.title = ":x: Error Registering: Member Already Registered"
@@ -227,7 +232,8 @@ class Admin(commands.Cog):
 
             # Mark token as used
             conn.execute(
-                "UPDATE tokens SET used = 1 WHERE token = ?", [token["token"]],
+                "UPDATE tokens SET used = 1 WHERE token = ?",
+                [token["token"]],
             )
             conn.commit()
 
@@ -288,7 +294,10 @@ class Admin(commands.Cog):
     async def syncall(self, ctx: commands.context):
         if ctx.invoked_subcommand is not None:
             return
-        await sync(ctx, conn.execute("SELECT * FROM members").fetchall())
+        await sync(
+            ctx,
+            conn.execute("SELECT * FROM members WHERE member_enabled = 1").fetchall(),
+        )
 
     @syncall.command()
     @commands.check_any(commands.is_owner(), is_mod())
@@ -356,7 +365,8 @@ class Admin(commands.Cog):
         """
         await ctx.message.delete()
         member = conn.execute(
-            "SELECT * FROM members WHERE id = ?", [system_member.id],
+            "SELECT * FROM members WHERE id = ?",
+            [system_member.id],
         ).fetchone()
         if member is not None:
             if member["member_enabled"] == 0:
@@ -400,7 +410,8 @@ class Admin(commands.Cog):
         """
         await ctx.message.delete()
         member = conn.execute(
-            "SELECT * FROM members WHERE id = ?", [system_member.id],
+            "SELECT * FROM members WHERE id = ?",
+            [system_member.id],
         ).fetchone()
         if member is not None:
             if member["member_enabled"] == 1:
@@ -444,7 +455,8 @@ class Admin(commands.Cog):
         """
         await ctx.message.delete()
         member = conn.execute(
-            "SELECT * FROM members WHERE id = ?", [system_member.id],
+            "SELECT * FROM members WHERE id = ?",
+            [system_member.id],
         ).fetchone()
         if member is not None:
             log.debug(f"Disabling {system_member}")
@@ -455,7 +467,8 @@ class Admin(commands.Cog):
             if confirmation.confirmed:
                 await confirmation.message.delete()
                 conn.execute(
-                    "DELETE FROM members WHERE id = ?", [system_member.id],
+                    "DELETE FROM members WHERE id = ?",
+                    [system_member.id],
                 )
                 conn.commit()
                 await ctx.send(
