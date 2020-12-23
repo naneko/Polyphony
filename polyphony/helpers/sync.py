@@ -28,7 +28,7 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
 
         await instance.wait_until_ready()
 
-        log.debug(f"Syncing {instance.user}")
+        log.info(f"Syncing {instance.user}")
 
         await logger.log(
             f":hourglass: Syncing {instance.user.mention}... ({i+1}/{len(query)})"
@@ -40,6 +40,7 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
             logger.content[
                 -1
             ] = f":x: Failed to sync {instance.user.mention} from PluralKit"
+            log.warning(f"Failed to sync {instance.user}")
             await instance.close()
             continue
 
@@ -112,6 +113,8 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
                 -1
             ] = f":warning: Synced {instance.user.mention} with errors:"
             await logger.log(error_text)
+
+        log.info(f"Synced {instance.user}")
 
         await instance.close()
 

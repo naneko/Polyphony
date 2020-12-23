@@ -1,0 +1,34 @@
+-- Schema Version 4
+
+-- Remove not null constraint from pk_avatar_url
+create table members_dg_tmp
+(
+	token TEXT
+		primary key
+		references tokens,
+	pk_member_id TEXT not null
+		unique,
+	main_account_id INTEGER not null
+		references users,
+	id INTEGER not null
+		unique,
+	member_name TEXT not null,
+	display_name TEXT,
+	pk_avatar_url TEXT,
+	pk_proxy_tags TEXT not null,
+	pk_keep_proxy INT not null,
+	member_enabled INT not null,
+	nickname TEXT,
+	check (pk_keep_proxy == 1 OR pk_keep_proxy == 0),
+	check (pk_keep_proxy == 1 OR pk_keep_proxy == 0)
+);
+
+insert into members_dg_tmp(token, pk_member_id, main_account_id, id, member_name, display_name, pk_avatar_url, pk_proxy_tags, pk_keep_proxy, member_enabled, nickname) select token, pk_member_id, main_account_id, id, member_name, display_name, pk_avatar_url, pk_proxy_tags, pk_keep_proxy, member_enabled, nickname from members;
+
+drop table members;
+
+alter table members_dg_tmp rename to members;
+
+-- Set Database Version
+DELETE FROM meta;
+INSERT INTO meta VALUES (4);
