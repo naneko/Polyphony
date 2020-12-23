@@ -9,6 +9,7 @@ from typing import Optional, Union
 import discord
 from discord.ext import commands
 
+from polyphony.bot import helper
 from polyphony.helpers.checks import is_polyphony_user, is_mod
 from polyphony.helpers.database import c, conn
 from polyphony.helpers.member_list import send_member_list
@@ -18,7 +19,6 @@ from polyphony.settings import (
     NEVER_SYNC_ROLES,
     ALWAYS_SYNC_ROLES,
     DISABLE_ROLESYNC_ROLES,
-    TOKEN,
 )
 
 log = logging.getLogger("polyphony." + __name__)
@@ -145,7 +145,10 @@ class User(commands.Cog):
     @help.command()
     @commands.check_any(is_mod(), commands.is_owner())
     async def admin(self, ctx: commands.context):
-        embed = discord.Embed(title="Polyphony Admin Help", inline=False,)
+        embed = discord.Embed(
+            title="Polyphony Admin Help",
+            inline=False,
+        )
         embed.add_field(
             name=":hamburger: `;;list`",
             value="> `;;list` lists all enabled members\n"
@@ -289,7 +292,8 @@ class User(commands.Cog):
         """
         log.debug(f"Listing members for {ctx.author.display_name}...")
         c.execute(
-            "SELECT * FROM members WHERE main_account_id == ?", [ctx.author.id],
+            "SELECT * FROM members WHERE main_account_id == ?",
+            [ctx.author.id],
         )
         member_list = c.fetchall()
         embed = discord.Embed(title=f"Members of System")
@@ -402,7 +406,8 @@ class User(commands.Cog):
             embed.set_footer(text="Use ;;ap off to turn autoproxy off")
         elif arg == "off":
             conn.execute(
-                "UPDATE users SET autoproxy_mode = NULL WHERE id == ?", [ctx.author.id],
+                "UPDATE users SET autoproxy_mode = NULL WHERE id == ?",
+                [ctx.author.id],
             )
             conn.commit()
             embed = discord.Embed(description=f"Autoproxy is now **off**")
@@ -470,7 +475,8 @@ class User(commands.Cog):
                 text="Will timeout in 5 minutes. Changes may take a moment to update."
             )
             embed.set_author(
-                name=system_member.display_name, icon_url=system_member.avatar_url,
+                name=system_member.display_name,
+                icon_url=system_member.avatar_url,
             )
             instructions = await ctx.channel.send(ctx.author.mention, embed=embed)
             loading_embed = discord.Embed(
@@ -585,7 +591,8 @@ class User(commands.Cog):
                     text='Role sync times out after 5 minutes. Type "done" next time to save changes.'
                 )
                 embed.set_author(
-                    name=system_member.display_name, icon_url=system_member.avatar_url,
+                    name=system_member.display_name,
+                    icon_url=system_member.avatar_url,
                 )
                 await instructions.edit(content="", embed=embed)
                 await loading.delete()
@@ -601,7 +608,7 @@ class User(commands.Cog):
     ):
         """
         edit (message id) [message]: Edits the last message or message with ID
-        
+
         :param ctx: Discord Context
         :param message: (optional) ID of message
         :param content: Message Content
@@ -616,33 +623,38 @@ class User(commands.Cog):
                 log.debug(
                     f"Editing message {message.id} by {message.author} for {ctx.author}"
                 )
-                message = await self.bot.get_channel(message.channel.id).fetch_message(
-                    message.id
+                await helper.edit_as(
+                    message,
+                    content,
+                    member["token"],
                 )
-                self.bot.http.token = member["token"]
-                await message.edit(content=content)
-                self.bot.http.token = TOKEN
         else:
             log.debug(f"Editing last Polyphony message for {ctx.author}")
             member_ids = [
                 member["id"]
                 for member in conn.execute(
-                    "SELECT * FROM members WHERE main_account_id == ?", [ctx.author.id],
+                    "SELECT * FROM members WHERE main_account_id == ?",
+                    [ctx.author.id],
                 ).fetchall()
             ]
             async for message in ctx.channel.history():
                 if message.author.id in member_ids:
-                    self.bot.http.token = conn.execute(
-                        "SELECT * FROM members WHERE id == ?", [message.author.id],
-                    ).fetchone()["token"]
-                    await message.edit(content=content)
-                    self.bot.http.token = TOKEN
+                    await helper.edit_as(
+                        message,
+                        content,
+                        conn.execute(
+                            "SELECT * FROM members WHERE id == ?",
+                            [message.author.id],
+                        ).fetchone()["token"],
+                    )
                     break
 
     @commands.command(name="del")
     @is_polyphony_user()
     async def delete(
-        self, ctx: commands.context, message: Optional[discord.Message] = None,
+        self,
+        ctx: commands.context,
+        message: Optional[discord.Message] = None,
     ):
         """
         del (id): Deletes the last message unless a message ID parameter is provided. Can be run multiple times. n max limited by config.
@@ -669,7 +681,8 @@ class User(commands.Cog):
             member_ids = [
                 member["id"]
                 for member in conn.execute(
-                    "SELECT * FROM members WHERE main_account_id == ?", [ctx.author.id],
+                    "SELECT * FROM members WHERE main_account_id == ?",
+                    [ctx.author.id],
                 ).fetchall()
             ]
             async for message in ctx.channel.history():

@@ -23,6 +23,7 @@ except ImportError:
 # Get config from environment variables (returns none if not found)
 DEBUG: bool = bool(os.getenv("DEBUG", False))
 TOKEN: str = os.getenv("TOKEN")
+HELPER_TOKEN: str = os.getenv("HELPER_TOKEN")
 # TODO: Replace guild-specific checks to just use configured Guild ID (and once this happens, don't allow the bot to start without it)
 # TODO: Log warning when running in guild that is not specified guild ID
 GUILD_ID: int = int(os.getenv("GUILD_ID", 0))
@@ -34,8 +35,6 @@ ALWAYS_SYNC_ROLES: list = os.getenv("ALWAYS_SYNC_ROLES", "").split(",")
 NEVER_SYNC_ROLES: list = os.getenv("NEVER_SYNC_ROLES", "").split(",")
 DISABLE_ROLESYNC_ROLES: list = os.getenv("DISABLE_ROLESYNC_ROLES", "").split(",")
 DEFAULT_INSTANCE_PERMS: int = os.getenv("DEFAULT_INSTANCE_PERMS", 0)
-SUSPEND_ON_LEAVE: bool = os.getenv("SUSPEND_ON_LEAVE", True)  # TODO: Implement
-SUSPEND_INACTIVE_DAYS: int = os.getenv("SUSPEND_INACTIVE_DAYS", 14)  # TODO: Implement
 COMMAND_PREFIX: str = os.getenv("COMMAND_PREFIX", ";;")
 ADMIN_LOGS_CHANNEL_ID: int = int(os.getenv("ADMIN_LOGS_CHANNEL_ID", 0))
 # 0 to prevent accidental "None" value from API:

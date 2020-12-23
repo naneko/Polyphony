@@ -23,10 +23,11 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
 
         asyncio.run_coroutine_threadsafe(instance.start(member["token"]), bot.loop)
 
+        await instance.wait_until_ready()
+
         await logger.log(
             f":hourglass: Syncing {instance.user.mention}... ({i}/{len(query)})"
         )
-        await instance.wait_until_ready()
 
         # Pull from PluralKit
         pk_member = await pk_get_member(member["pk_member_id"])

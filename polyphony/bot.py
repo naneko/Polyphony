@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sqlite3
 
@@ -5,10 +6,12 @@ import discord
 from discord.ext import commands
 
 from .helpers.database import init_db
+from .instance.helper import HelperInstance
 from .settings import (
     TOKEN,
     DEBUG,
     COMMAND_PREFIX,
+    HELPER_TOKEN,
 )
 
 log = logging.getLogger(__name__)
@@ -16,6 +19,7 @@ log = logging.getLogger(__name__)
 # Main Polyhony Bot Instance
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
+helper = HelperInstance(intents=intents)
 
 # Disable default help
 bot.remove_command("help")
@@ -28,8 +32,6 @@ init_extensions = ["commands.admin", "commands.user", "commands.debug", "events"
 # TODO: Autoproxy (sync up typing status if possible)
 
 log.info("Polyphony is starting...")
-
-log.info("Starting member initialization...")
 
 # Initialize Database
 init_db()
@@ -46,12 +48,24 @@ for ext in init_extensions:
 log.debug("Default extensions loaded.")
 
 
+class HelperRunning:
+    def __init__(self):
+        self.running = False
+
+
+helper_running = HelperRunning()
+
+
 @bot.event
 async def on_ready():
     """
     Execute on bot initialization with the Discord API.
     """
     log.info(f"[POLYPHONY MAIN BOT READY] Started as {bot.user}")
+    if not helper_running.running:
+        log.debug("Starting helper...")
+        asyncio.run_coroutine_threadsafe(helper.start(HELPER_TOKEN), bot.loop)
+        helper_running.running = True
 
 
 @bot.command()
@@ -62,7 +76,8 @@ async def reload(ctx: commands.context, reload_all=None):
 
     :param ctx: Discord Context
     """
-    # TODO: Restart Instances
+    # TODO: Re-implement accounting for new system
+    # TODO: Allow for full bot restart
     async with ctx.channel.typing():
         log.info("Reloading Extensions...")
 
@@ -81,7 +96,11 @@ async def reload(ctx: commands.context, reload_all=None):
 
             try:
                 bot.reload_extension(extension)
-            except (ExtensionNotLoaded, ExtensionNotFound, ExtensionFailed,) as e:
+            except (
+                ExtensionNotLoaded,
+                ExtensionNotFound,
+                ExtensionFailed,
+            ) as e:
                 log.exception(e)
                 await ctx.send(
                     embed=discord.Embed(

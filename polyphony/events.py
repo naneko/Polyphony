@@ -8,6 +8,7 @@ import discord
 import emoji
 from discord.ext import commands
 
+from polyphony.bot import helper
 from polyphony.helpers.database import conn
 from polyphony.helpers.message_cache import (
     new_proxied_message,
@@ -17,7 +18,6 @@ from polyphony.settings import (
     COMMAND_PREFIX,
     DELETE_LOGS_CHANNEL_ID,
     DELETE_LOGS_USER_ID,
-    TOKEN,
 )
 
 log = logging.getLogger("polyphony." + __name__)
@@ -107,12 +107,13 @@ class Events(commands.Cog):
                 # Trigger typing if uploading attachment
                 await msg.channel.trigger_typing() if len(msg.attachments) > 0 else None
 
-                # Momentarily switch bot tokens and send message
-                self.bot.http.token = member["token"]
-                await msg.channel.send(
-                    message, files=[await file.to_file() for file in msg.attachments],
+                # TODO: Autoproxy detect reaction edit override
+                await helper.send_as(
+                    msg,
+                    message,
+                    member["token"],
+                    files=[await file.to_file() for file in msg.attachments],
                 )
-                self.bot.http.token = TOKEN
                 await msg.delete()
 
                 new_proxied_message(msg)
@@ -144,7 +145,8 @@ class Events(commands.Cog):
                     description=f"Originally to {self.bot.get_user(member['id']).mention}\n[Highlight Message]({msg.jump_url})"
                 )
                 embed.set_author(
-                    name=f"From {msg.author}", icon_url=msg.author.avatar_url,
+                    name=f"From {msg.author}",
+                    icon_url=msg.author.avatar_url,
                 )
 
                 await self.bot.get_channel(msg.channel.id).send(
@@ -222,9 +224,9 @@ class Events(commands.Cog):
                     )
                     # If message isn't "cancel" then momentarily switch bot tokens and edit the message
                     if message.content.lower() != "cancel":
-                        self.bot.http.token = member["token"]
-                        await reaction.message.edit(content=message.content)
-                        self.bot.http.token = TOKEN
+                        await helper.edit_as(
+                            reaction.message, message.content, member["token"]
+                        )
 
                 # On timeout, delete instructions and reaction
                 except asyncio.TimeoutError:
