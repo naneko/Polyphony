@@ -67,5 +67,5 @@ class LogMessage:
         await self.batches[0][0].edit(embed=embed)
 
         for message, content in self.batches[1:]:
-            embed = discord.Embed(description=content, color=self.color)
+            embed = discord.Embed(description="\n".join(content), color=self.color)
             await message.edit(embed=embed)
