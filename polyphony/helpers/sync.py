@@ -28,7 +28,7 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
 
         await instance.wait_until_ready()
 
-        log.info(f"Syncing {instance.user}")
+        log.debug(f"Syncing {instance.user}")
 
         await logger.log(
             f":hourglass: Syncing {instance.user.mention}... ({i+1}/{len(query)})"
@@ -114,7 +114,7 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
             ] = f":warning: Synced {instance.user.mention} with errors:"
             await logger.log(error_text)
 
-        log.info(f"Synced {instance.user}")
+        log.debug(f"Synced {instance.user}")
 
         await instance.close()
 

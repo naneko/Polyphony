@@ -52,10 +52,10 @@ class PolyphonyInstance(discord.Client):
                 [self.user.id, self.pk_member_id],
             )
 
-        log.info(f"[READY] {self.user} ({self.pk_member_id})")
+        log.debug(f"[READY] {self.user} ({self.pk_member_id})")
 
     async def on_disconnect(self):
-        log.info(f"[DISCONNECTED] {self.user} ({self.pk_member_id})")
+        log.debug(f"[DISCONNECTED] {self.user} ({self.pk_member_id})")
 
     async def update_username(self, name):
         log.debug(f"{self.user} ({self.pk_member_id}): Updating username")
