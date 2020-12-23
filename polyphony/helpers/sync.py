@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import sqlite3
 from typing import List, NoReturn
 
@@ -9,6 +10,8 @@ from polyphony.helpers.database import conn
 from polyphony.helpers.log_message import LogMessage
 from polyphony.helpers.pluralkit import pk_get_member
 from polyphony.instance.bot import PolyphonyInstance
+
+log = logging.getLogger(__name__)
 
 
 async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
@@ -25,8 +28,10 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
 
         await instance.wait_until_ready()
 
+        log.debug(f"Syncing {instance.user}")
+
         await logger.log(
-            f":hourglass: Syncing {instance.user.mention}... ({i}/{len(query)})"
+            f":hourglass: Syncing {instance.user.mention}... ({i+1}/{len(query)})"
         )
 
         # Pull from PluralKit
@@ -35,6 +40,8 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
             logger.content[
                 -1
             ] = f":x: Failed to sync {instance.user.mention} from PluralKit"
+            await instance.close()
+            continue
 
         await instance.wait_until_ready()
 
