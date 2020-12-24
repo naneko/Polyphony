@@ -2,12 +2,18 @@
 A more robust implementation of PluralKit that hooks into the PluralKit API
 
 # How to Run
+## Step 1: Create a bot
+- Create the main bot
+  - Turn off "Public Bot"
+  - Create a new bot using the [Discord Developer Portal](https://discord.com/developers/applications)
+  - Turn on "Presence Intent" and "Server Members Intent"
 
-## Step 1: Create a `.env` file or set enviroment variables
+## Step 2: Create a `.env` file or set enviroment variables
 Create a `.env` file in the project root to set your environment variables. Polyphony takes all of it's configuration in the form of environment variables.
 
 **Required**
-- `TOKEN` - Discord Bot Token
+- `TOKEN` - Discord Bot Token for Main Bot
+- `HELPER_TOKEN` - Discord Bot Token for Helper Bot
 - `GUILD_ID` - Guild ID of server Polyphony is being used in
 
 **Role System**
@@ -30,13 +36,23 @@ Create a `.env` file in the project root to set your environment variables. Poly
 - `DEBUG` - Python Boolean, Activates Debug Mode
 - `DATABASE_URI` - Location of the SQLite database ([See more info here](https://docs.python.org/3/library/sqlite3.html)) (default: (project root)/polyphony/polyphony.db)
 
-## Step 2: Install Dependancies
+## Step 3: Install Dependancies
 This project requires Python 3.9.1 and SQLite >=3.25.0 
 
 Dependency, testing, and build management is done using [Poetry](https://python-poetry.org/). Install Poetry on your system and then run `poetry install` in the project root.
 
-## Step 3: Run
+## Step 4: Run
 To run polyphony, use `poetry run polyphony`.
+
+## Step 5: Use
+How to add a member:
+1. Create a new bot using the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Turn off "Public Bot"
+3. On your server, run the command `;;tokens`. Make sure you have DMs turned on for your server.
+4. Follow the instructions in your DMs
+5. Use `;;register` to register members (see `;;help admin` for details)
+
+**NOTE:** *Never paste tokens on your server!*
 
 # Contributing
 Help us build Polyphony!
