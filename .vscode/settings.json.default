@@ -1,6 +1,0 @@
-{
-    "python.formatting.provider": "black",
-    "autoDocstring.docstringFormat": "sphinx",
-    "python.linting.pydocstyleEnabled": true,
-    "python.linting.flake8CategorySeverity.F": "Warning"
-}
