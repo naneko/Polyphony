@@ -3,10 +3,9 @@ A more robust implementation of PluralKit that hooks into the PluralKit API
 
 # How to Run
 ## Step 1: Create a bot
-- Create the main bot
-  - Turn off "Public Bot"
-  - Create a new bot using the [Discord Developer Portal](https://discord.com/developers/applications)
-  - Turn on "Presence Intent" and "Server Members Intent"
+- Create a new bot using the [Discord Developer Portal](https://discord.com/developers/applications)
+- Turn off "Public Bot"
+- Turn on "Presence Intent" and "Server Members Intent"
 
 ## Step 2: Create a `.env` file or set enviroment variables
 Create a `.env` file in the project root to set your environment variables. Polyphony takes all of it's configuration in the form of environment variables.
