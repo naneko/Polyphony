@@ -23,7 +23,6 @@ except ImportError:
 # Get config from environment variables (returns none if not found)
 DEBUG: bool = bool(os.getenv("DEBUG", False))
 TOKEN: str = os.getenv("TOKEN")
-HELPER_TOKEN: str = os.getenv("HELPER_TOKEN")
 # TODO: Replace guild-specific checks to just use configured Guild ID (and once this happens, don't allow the bot to start without it)
 # TODO: Log warning when running in guild that is not specified guild ID
 GUILD_ID: int = int(os.getenv("GUILD_ID", 0))

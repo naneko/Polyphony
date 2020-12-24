@@ -11,7 +11,6 @@ from .settings import (
     TOKEN,
     DEBUG,
     COMMAND_PREFIX,
-    HELPER_TOKEN,
 )
 
 log = logging.getLogger(__name__)
@@ -61,10 +60,10 @@ async def on_ready():
     """
     Execute on bot initialization with the Discord API.
     """
-    log.info(f"[POLYPHONY MAIN BOT READY] Started as {bot.user}")
+    log.info(f"Finishing initialization...")
     if not helper_running.running:
         log.debug("Starting helper...")
-        asyncio.run_coroutine_threadsafe(helper.start(HELPER_TOKEN), bot.loop)
+        asyncio.run_coroutine_threadsafe(helper.start(TOKEN), bot.loop)
         helper_running.running = True
 
 
