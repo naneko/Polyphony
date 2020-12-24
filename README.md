@@ -11,8 +11,7 @@ A more robust implementation of PluralKit that hooks into the PluralKit API
 Create a `.env` file in the project root to set your environment variables. Polyphony takes all of it's configuration in the form of environment variables.
 
 **Required**
-- `TOKEN` - Discord Bot Token for Main Bot
-- `HELPER_TOKEN` - Discord Bot Token for Helper Bot
+- `TOKEN` - Discord Bot Token
 - `GUILD_ID` - Guild ID of server Polyphony is being used in
 
 **Role System**
