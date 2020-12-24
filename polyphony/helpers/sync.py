@@ -106,6 +106,10 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
             elif out > 0:
                 error_text += f"> Nick didn't update on {out} guild(s)\n"
 
+        # Update Roles
+        await logger.edit(-1, f":hourglass: Syncing {instance.user.mention} Roles... ({i}/{len(query)})")
+        await instance.update_default_roles()
+
         if error_text == "":
             await logger.edit(-1, f":white_check_mark: Synced {instance.user.mention}")
         else:

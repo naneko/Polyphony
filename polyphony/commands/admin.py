@@ -267,6 +267,10 @@ class Admin(commands.Cog):
             elif out > 0:
                 sync_error_text += f"> Nick didn't update on {out} guild(s)\n"
 
+            # Update Roles
+            await logger.edit(-1, f":hourglass: Updating Roles...")
+            await instance.update_default_roles()
+
             if sync_error_text == "":
                 await logger.edit(-1, ":white_check_mark: Synced instance")
             else:

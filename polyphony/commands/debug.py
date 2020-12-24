@@ -63,6 +63,7 @@ class Debug(commands.Cog):
     @commands.command(aliases=["unregister"])
     @commands.is_owner()
     async def deregister(self, ctx: commands.context, ctx_member: discord.Member):
+        # TODO: Option to delete all old messages
         member = conn.execute(
             "SELECT * FROM members WHERE id = ?", [ctx_member.id]
         ).fetchone()
