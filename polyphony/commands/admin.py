@@ -289,7 +289,7 @@ class Admin(commands.Cog):
             await logger.log(sync_error_text)
         await logger.log(f"*There are now {len(slots)} slots available*")
         log.info(
-            f"{instance.user} ({instance.pk_member_id}): New member instance registered"
+            f"{instance.user} ({instance.pk_member_id}): New member instance registered ({len(slots)} slots left)"
         )
         await instance.close()
 
@@ -541,7 +541,6 @@ class Admin(commands.Cog):
                         ).fetchone()
                         is None
                     ):
-                        log.info("Adding new token to database")
                         conn.execute("INSERT INTO tokens VALUES(?, ?)", [token, False])
                         conn.commit()
                         logger.title = f"Bot token #{index+1} added"
@@ -553,6 +552,7 @@ class Admin(commands.Cog):
                         await logger.send(
                             f"[Invite to Server]({discord.utils.oauth_url(client_id, permissions=discord.Permissions(DEFAULT_INSTANCE_PERMS), guild=bot.get_guild(GUILD_ID))})\n\n**Client ID:** {client_id}\nThere are now {len(slots)} slot(s) available"
                         )
+                        log.info(f"New token added by {ctx.author} (There are now {len(slots)} slots)")
                     else:
                         logger.title = f"Token #{index+1} already in database"
                         logger.color = discord.Color.orange()
