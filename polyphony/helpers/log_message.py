@@ -59,13 +59,14 @@ class LogMessage:
             self.color = color
         await self.update()
 
-        embed = discord.Embed(
-            title=self.title,
-            description="\n".join(self.batches[0][1]),
-            color=self.color,
-        )
-        await self.batches[0][0].edit(embed=embed)
+        if self.batches:
+            embed = discord.Embed(
+                title=self.title,
+                description="\n".join(self.batches[0][1]),
+                color=self.color,
+            )
+            await self.batches[0][0].edit(embed=embed)
 
-        for message, content in self.batches[1:]:
-            embed = discord.Embed(description="\n".join(content), color=self.color)
-            await message.edit(embed=embed)
+            for message, content in self.batches[1:]:
+                embed = discord.Embed(description="\n".join(content), color=self.color)
+                await message.edit(embed=embed)
