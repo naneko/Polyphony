@@ -325,7 +325,16 @@ class User(commands.Cog):
             [ctx.author.id, ctx_member.id],
         ).fetchone()
         if member is not None:
-            with ctx.typing():
+            with ctx.channel.typing():
+                embed = discord.Embed(
+                    description=f":hourglass: {'Updating' if nickname != '' else 'Clearing'} nickname for {ctx_member.mention}...",
+                    color=discord.Color.orange(),
+                )
+                embed.set_author(
+                    name=ctx_member.display_name, icon_url=ctx_member.avatar_url
+                )
+                status_msg = await ctx.channel.send(embed=embed)
+
                 # Create instance
                 instance = PolyphonyInstance(member["pk_member_id"])
                 asyncio.run_coroutine_threadsafe(
@@ -339,8 +348,8 @@ class User(commands.Cog):
 
                 if out < 0:
                     embed = discord.Embed(
-                        title=f"**Could not update nickname**\n",
-                        description=f"Nickname `{(nickname[:42] + '...') if len(nickname or '') > 42 else nickname}` is too long",
+                        title=f":x: **Could not update nickname**\n",
+                        description=f":warning: Nickname `{(nickname[:42] + '...') if len(nickname or '') > 42 else nickname}` is too long",
                         color=discord.Color.red(),
                     )
                     embed.set_author(
@@ -349,7 +358,7 @@ class User(commands.Cog):
                     embed.set_footer(text="Nicknames must be 32 characters or less")
                 else:
                     embed = discord.Embed(
-                        description=f"Nickname updated for {ctx_member.mention}",
+                        description=f":white_check_mark: Nickname {'updated' if nickname != '' else 'cleared'} for {ctx_member.mention}",
                         color=discord.Color.green(),
                     )
                     embed.set_author(
@@ -360,7 +369,7 @@ class User(commands.Cog):
                             text="With errors: did not update in all guilds"
                         )
 
-                await ctx.channel.send(embed=embed)
+                await status_msg.edit(embed=embed)
 
     @commands.command()
     @commands.check_any(is_mod(), is_polyphony_user(), commands.is_owner())

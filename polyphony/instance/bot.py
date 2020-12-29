@@ -58,6 +58,7 @@ class PolyphonyInstance(discord.Client):
         log.debug(f"[DISCONNECTED] {self.user} ({self.pk_member_id})")
 
     async def update_username(self, name):
+        await self.wait_until_ready()
         log.debug(f"{self.user} ({self.pk_member_id}): Updating username")
         if len(name or "") > 32:
             return "Username must be 32 characters or less"
@@ -79,6 +80,7 @@ class PolyphonyInstance(discord.Client):
                 return "An unknown error occurred while updating username"
 
     async def update_avatar(self, url, no_timeout=False):
+        await self.wait_until_ready()
         import requests
 
         try:
@@ -105,6 +107,7 @@ class PolyphonyInstance(discord.Client):
             return "Avatar image type is invalid"
 
     async def update_default_roles(self):
+        await self.wait_until_ready()
         log.debug(f"{self.user} ({self.pk_member_id}): Updating default roles")
         add_roles = []
         remove_roles = []
@@ -126,6 +129,7 @@ class PolyphonyInstance(discord.Client):
             )
 
     async def update_nickname(self, name):
+        await self.wait_until_ready()
         log.debug(f"{self.user} ({self.pk_member_id}): Updating nickname in guilds")
         return_value = 0
 
@@ -134,6 +138,12 @@ class PolyphonyInstance(discord.Client):
 
         if name is None or name == "":
             name = self.user.display_name[2:]
+
+        conn.execute(
+            "UPDATE members SET nickname = ? WHERE id == ?",
+            [name, self.user.id],
+        )
+        conn.commit()
 
         for guild in self.guilds:
             try:
