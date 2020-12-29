@@ -451,25 +451,25 @@ class User(commands.Cog):
                     member_roles.append(role)
 
             embed = discord.Embed(
-                title="Syncing roles...",
+                title=":hourglass: Syncing roles...",
                 description=f"Assign yourself the roles you want for {system_member.mention} and then type `done`",
                 color=discord.Color.orange(),
             )
             saved_roles_str = " ".join([role.mention for role in ctx.author.roles[1:]])
             embed.add_field(
-                name=f"`{ctx.author.display_name}`'s Roles *(saved)*",
+                name=f":file_folder: __{ctx.author.display_name}__'s Roles *(saved)*",
                 value=saved_roles_str
                 if len(saved_roles_str) < 1024
-                else "Too many to show" or "None",
+                else ":hushed: Too many to show" or "None",
             )
             embed_member_original_roles = " ".join(
                 [role.mention for role in system_member.roles[1:]]
             )
             embed.add_field(
-                name=f"`{system_member.display_name}`'s Original Roles",
+                name=f"__{system_member.display_name}__'s Original Roles",
                 value=embed_member_original_roles
                 if len(embed_member_original_roles)
-                else "Too many to show" or "None",
+                else ":hushed: Too many to show" or "None",
             )
             embed.set_footer(
                 text="Will timeout in 5 minutes. Changes may take a moment to update."
@@ -480,7 +480,7 @@ class User(commands.Cog):
             )
             instructions = await ctx.channel.send(ctx.author.mention, embed=embed)
             loading_embed = discord.Embed(
-                title="*Hold on while I update your roles...*",
+                title=":hourglass: *Hold on while I update your roles...*",
                 color=discord.Color.orange(),
             )
             loading = await ctx.channel.send(embed=loading_embed)
@@ -503,7 +503,7 @@ class User(commands.Cog):
                     timeout=60 * 5,  # 5 mins
                 )
                 loading_embed = discord.Embed(
-                    title="*Hold on while I sync and update...*",
+                    title=":hourglass: *Hold on while I sync and update...*",
                     color=discord.Color.orange(),
                 )
                 await loading.edit(embed=loading_embed)
@@ -529,24 +529,24 @@ class User(commands.Cog):
                         ctx.author.add_roles(*user_roles),
                     )
                     embed = discord.Embed(
-                        title="Role Sync Complete",
-                        description=f"Finished syncing roles from {ctx.author.mention} to {system_member.mention}\n\n*{ctx.author.mention}'s original roles have been restored*",
+                        title=":white_check_mark: Role Sync Complete",
+                        description=f"Finished syncing roles from {ctx.author.mention} to {system_member.mention}\n{ctx.author.mention}'s original roles have been restored",
                         color=discord.Color.green(),
                     )
                     embed.add_field(
-                        name=f"`{system_member.display_name}`'s Old Roles",
+                        name=f"__{system_member.display_name}__'s Old Roles",
                         value=embed_member_original_roles
                         if len(embed_member_original_roles) < 1024
-                        else "Too many to show" or "None",
+                        else ":hushed: Too many to show" or "None",
                     )
                     new_roles_str = " ".join(
                         [role.mention for role in system_member.roles[1:]]
                     )
                     embed.add_field(
-                        name=f"`{system_member.display_name}`'s New Roles",
+                        name=f"__{system_member.display_name}__'s New Roles",
                         value=new_roles_str
                         if len(new_roles_str) < 1024
-                        else "Too many to show" or "None",
+                        else ":hushed: Too many to show" or "None",
                     )
                     embed.set_author(
                         name=system_member.display_name,
@@ -578,14 +578,14 @@ class User(commands.Cog):
                     name=f"`{system_member.display_name}`'s Restored Roles",
                     value=embed_member_original_roles
                     if len(embed_member_original_roles) < 1024
-                    else "Too many to show" or "None",
+                    else ":hushed: Too many to show" or "None",
                 )
                 unsynced_roles_str = " ".join([role.mention for role in unsynced_roles])
                 embed.add_field(
                     name=f"`{system_member.display_name}`'s Unsaved Roles Due to Timeout",
                     value=unsynced_roles_str
                     if len(unsynced_roles_str) < 1024
-                    else "Too many to show" or "None",
+                    else ":hushed: Too many to show" or "None",
                 )
                 embed.set_footer(
                     text='Role sync times out after 5 minutes. Type "done" next time to save changes.'

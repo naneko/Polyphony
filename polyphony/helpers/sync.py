@@ -14,8 +14,12 @@ from polyphony.instance.bot import PolyphonyInstance
 log = logging.getLogger(__name__)
 
 
-async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
-    logger = LogMessage(ctx, title=":hourglass: Syncing All Members...")
+async def sync(
+    ctx: commands.context,
+    query: List[sqlite3.Row],
+    message=":hourglass: Syncing Members",
+) -> NoReturn:
+    logger = LogMessage(ctx, message)
     logger.color = discord.Color.orange()
     await logger.init()
     for i, member in enumerate(query):
@@ -107,7 +111,10 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
                 error_text += f"> Nick didn't update on {out} guild(s)\n"
 
         # Update Roles
-        await logger.edit(-1, f":hourglass: Syncing {instance.user.mention} Roles... ({i}/{len(query)})")
+        await logger.edit(
+            -1,
+            f":hourglass: Syncing {instance.user.mention} Roles... ({i}/{len(query)})",
+        )
         await instance.update_default_roles()
 
         if error_text == "":
@@ -116,7 +123,9 @@ async def sync(ctx: commands.context, query: List[sqlite3.Row]) -> NoReturn:
             logger.content[
                 -1
             ] = f":warning: Synced {instance.user.mention} with errors:"
-            await logger.log(error_text)
+            await logger.log(
+                error_text if error_text.endswith("\n") else f"{error_text}\n"
+            )
 
         log.debug(f"Synced {instance.user}")
 

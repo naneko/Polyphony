@@ -30,14 +30,22 @@ async def send_member_list(
         if whoarewe:
             embed.add_field(
                 name=member["member_name"],
-                value=f"""> **User:** {member_user.mention}\n> **PluralKit Member ID:** `{member['pk_member_id']}`\n> **Tags:** {' or '.join(tags)}\n> **Enabled:** `{'Yes' if member['member_enabled'] else 'No'}`""",
+                value=f"""> **User:** {member_user.mention if hasattr(member_user, 'mention') else ":warning: *Unable to get User*"}\n"""
+                f"""> **PluralKit Member ID:** `{member['pk_member_id']}`\n"""
+                f"""> **Tags:** {' or '.join(tags)}\n"""
+                f"""> **Enabled:** {':white_check_mark:' if member['member_enabled'] else ':x:'}""",
                 inline=True,
             )
         else:
             embed.add_field(
                 name=member["member_name"],
-                value=f"""> **User:** {member_user.mention} (`{member_user.id}`)\n> **Account Owner:** {owner_user.mention if hasattr(owner_user, 'mention') else "*Unable to get User*"} (`{member["main_account_id"]}`)\n> **PluralKit Member ID:** `{member['pk_member_id']}`\n> **Tag(s):** {' or '.join(tags)}\n> **Enabled:** `{'Yes' if member['member_enabled'] else 'No'}`""",
-                inline=True,
+                value=f"""> **User:** {member_user.mention if hasattr(member_user, 'mention') else ":warning: *Unable to get User*"} (`{member["id"]}`)\n"""
+                f"""> **Account Owner:** {owner_user.mention if hasattr(owner_user, 'mention') else ":warning: *Unable to get User*"} (`{member["main_account_id"]}`)\n"""
+                f"""> **Nickname:** {f"`{member['nickname']}` *(Nick)*" if member['nickname'] and len(member['nickname'] or "") < 32 else (f"`{member['display_name']}` *(Display)*" if member['display_name'] else "`None`")} {"*(:warning: Set nickname too long)*" if len(member['nickname'] or "") > 32 else ""}\n"""
+                f"""> **PluralKit Member ID:** `{member['pk_member_id']}`\n"""
+                f"""> **Tag(s):** {' or '.join(tags)}\n"""
+                f"""> **Enabled:** {':white_check_mark:' if member['member_enabled'] else ':x:'}""",
+                inline=False,
             )
 
     await ctx.send(embed=embed)

@@ -9,6 +9,7 @@ import random
 import discord
 from discord.ext import commands
 
+from polyphony.helpers.checks import is_mod
 from polyphony.helpers.database import conn
 from polyphony.helpers.log_message import LogMessage
 from polyphony.helpers.pluralkit import (
@@ -26,18 +27,21 @@ class Debug(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def getsystem(self, ctx: commands.context, system):
         system_out = pprint.pformat(await pk_get_system(system))
         log.debug(f"\n{system_out}")
         await ctx.send(f"```python\n{system_out}```")
 
     @commands.command()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def getsystemmembers(self, ctx: commands.context, system):
         system_out = pprint.pformat(await pk_get_system_members(system))
         log.debug(f"\n{system_out}")
         await ctx.send(f"```python\n{system_out}```")
 
     @commands.command()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def getmember(self, ctx: commands.context, member):
         member_out = pprint.pformat(await pk_get_member(member))
         log.debug(f"\n{member_out}")
@@ -57,7 +61,7 @@ class Debug(commands.Cog):
         log.info(f"Pulled update successfully ({repo.heads[0].commit})")
 
         await ctx.send(
-            f"`POLYPHONY SYSTEM UTILITIES` Polyphony pulled `{repo.heads[0].commit}` from master branch. Run `;;reload` or `;;reload all` to complete upgrade."
+            f"`POLYPHONY SYSTEM UTILITIES` Polyphony pulled `{repo.heads[0].commit}` from master branch. Run `;;reload` to complete upgrade."
         )
 
     @commands.command(aliases=["unregister"])
@@ -96,10 +100,12 @@ class Debug(commands.Cog):
 
                 await logger.log("Freeing Token...")
                 conn.execute(
-                    "UPDATE tokens SET used = 0 WHERE token = ?", [member["token"]],
+                    "UPDATE tokens SET used = 0 WHERE token = ?",
+                    [member["token"]],
                 )
                 conn.execute(
-                    "DELETE FROM members WHERE token = ?", [member["token"]],
+                    "DELETE FROM members WHERE token = ?",
+                    [member["token"]],
                 )
                 conn.commit()
 
@@ -118,7 +124,8 @@ class Debug(commands.Cog):
     @commands.is_owner()
     async def removeuser(self, ctx: commands.context, member: discord.Member):
         conn.execute(
-            "DELETE FROM users WHERE id = ?", [member.id],
+            "DELETE FROM users WHERE id = ?",
+            [member.id],
         )
         conn.commit()
         await ctx.channel.send(

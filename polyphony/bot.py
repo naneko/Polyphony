@@ -69,7 +69,7 @@ async def on_ready():
 
 @bot.command()
 @commands.is_owner()
-async def reload(ctx: commands.context, reload_all=None):
+async def reload(ctx: commands.context):
     """
     Reload default extensions (cogs)
 
