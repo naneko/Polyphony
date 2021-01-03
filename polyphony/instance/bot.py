@@ -111,14 +111,17 @@ class PolyphonyInstance(discord.Client):
         log.debug(f"{self.user} ({self.pk_member_id}): Updating default roles")
         add_roles = []
         remove_roles = []
-        for role in INSTANCE_ADD_ROLES:
-            role = discord.utils.get(self.get_guild(GUILD_ID).roles, name=role)
-            if role is not None:
-                add_roles.append(role)
-        for role in INSTANCE_REMOVE_ROLES:
-            role = discord.utils.get(self.get_guild(GUILD_ID).roles, name=role)
-            if role is not None:
-                remove_roles.append(role)
+        try:
+            for role in INSTANCE_ADD_ROLES:
+                role = discord.utils.get(self.get_guild(GUILD_ID).roles, name=role)
+                if role is not None:
+                    add_roles.append(role)
+            for role in INSTANCE_REMOVE_ROLES:
+                role = discord.utils.get(self.get_guild(GUILD_ID).roles, name=role)
+                if role is not None:
+                    remove_roles.append(role)
+        except AttributeError:
+            return "Failed to update default roles. Is the bot on the server?"
         from polyphony.bot import bot
 
         if add_roles:
@@ -127,6 +130,7 @@ class PolyphonyInstance(discord.Client):
             await bot.get_guild(GUILD_ID).get_member(self.user.id).remove_roles(
                 *remove_roles
             )
+        return
 
     async def update_nickname(self, name):
         await self.wait_until_ready()

@@ -269,7 +269,9 @@ class Admin(commands.Cog):
 
             # Update Roles
             await logger.edit(-1, f":hourglass: Updating Roles...")
-            await instance.update_default_roles()
+            out = await instance.update_default_roles()
+            if out:
+                sync_error_text += f"> {out}\n"
 
             if sync_error_text == "":
                 await logger.edit(-1, ":white_check_mark: Synced instance")

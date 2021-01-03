@@ -115,7 +115,9 @@ async def sync(
             -1,
             f":hourglass: Syncing {instance.user.mention} Roles... ({i}/{len(query)})",
         )
-        await instance.update_default_roles()
+        out = await instance.update_default_roles()
+        if out:
+            error_text += f"> {out}\n"
 
         if error_text == "":
             await logger.edit(-1, f":white_check_mark: Synced {instance.user.mention}")

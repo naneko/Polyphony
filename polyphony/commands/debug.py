@@ -96,7 +96,7 @@ class Debug(commands.Cog):
                     if role.name is not role.managed:
                         roles.append(role)
                 await ctx_member.remove_roles(*roles)
-                await instance.update_default_roles()
+                await instance.update_default_roles() # TODO: Catch errors
 
                 await logger.log("Freeing Token...")
                 conn.execute(
