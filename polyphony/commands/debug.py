@@ -155,16 +155,17 @@ class Debug(commands.Cog):
             is None
         ):
             conn.execute("INSERT INTO users VALUES (?, NULL, NULL)", [main_account.id])
-            ctx.send(
+            await ctx.send(
                 f"`POLYPHONY SYSTEM UTILITIES` {main_account.mention} is a new Polyphony user. Adding to database..."
             )
         conn.execute(
             "UPDATE members SET main_account_id = ? WHERE id = ?",
             [main_account.id, instance.id],
         )
-        ctx.send(
+        await ctx.send(
             f"`POLYPHONY SYSTEM UTILITIES` {instance.mention} is now assigned to {main_account.mention}"
         )
+        conn.commit()
 
 
 def setup(bot: commands.bot):
