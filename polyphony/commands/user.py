@@ -304,13 +304,18 @@ class User(commands.Cog):
     async def whois(self, ctx: commands.context, system_member: discord.Member):
         c.execute("SELECT * FROM members WHERE id == ?", [system_member.id])
         member = c.fetchone()
-        embed = discord.Embed(
-            description=f"{system_member.mention} is part of the {self.bot.get_user(member['main_account_id']).mention} system",
-        )
-        embed.add_field(name="User ID", value=self.bot.get_user(member["id"]).id)
+        try:
+            embed = discord.Embed(
+                description=f"{system_member.mention} is part of the {self.bot.get_user(member['main_account_id']).mention} system",
+            )
+        except AttributeError:
+            embed = discord.Embed(
+                description=f":x: It appears the user for {system_member.mention} has left the server.",
+            )
+        embed.add_field(name="User ID", value=member["id"])
         embed.add_field(
             name="System Owner ID",
-            value=self.bot.get_user(member["main_account_id"]).id,
+            value=member["main_account_id"],
         )
         embed.set_thumbnail(url=self.bot.get_user(member["id"]).avatar_url)
         await ctx.channel.send(embed=embed)

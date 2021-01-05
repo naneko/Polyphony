@@ -554,7 +554,9 @@ class Admin(commands.Cog):
                         await logger.send(
                             f"[Invite to Server]({discord.utils.oauth_url(client_id, permissions=discord.Permissions(DEFAULT_INSTANCE_PERMS), guild=bot.get_guild(GUILD_ID))})\n\n**Client ID:** {client_id}\nThere are now {len(slots)} slot(s) available"
                         )
-                        log.info(f"New token added by {ctx.author} (There are now {len(slots)} slots)")
+                        log.info(
+                            f"New token added by {ctx.author} (There are now {len(slots)} slots)"
+                        )
                     else:
                         logger.title = f"Token #{index+1} already in database"
                         logger.color = discord.Color.orange()

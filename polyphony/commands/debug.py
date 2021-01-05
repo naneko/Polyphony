@@ -96,7 +96,7 @@ class Debug(commands.Cog):
                     if role.name is not role.managed:
                         roles.append(role)
                 await ctx_member.remove_roles(*roles)
-                await instance.update_default_roles() # TODO: Catch errors
+                await instance.update_default_roles()  # TODO: Catch errors
 
                 await logger.log("Freeing Token...")
                 conn.execute(
@@ -130,6 +130,40 @@ class Debug(commands.Cog):
         conn.commit()
         await ctx.channel.send(
             f"`POLYPHONY SYSTEM UTILITIES` {member.mention} has been removed from the collection of Polyphony users."
+        )
+
+    @commands.command()
+    @commands.is_owner()
+    async def reassign(
+        self,
+        ctx: commands.context,
+        instance: discord.Member,
+        main_account: discord.Member,
+    ):
+        if (
+            conn.execute("SELECT * FROM members WHERE id = ?", [instance.id]).fetchone()
+            is None
+        ):
+            await ctx.channel.send(
+                f"`POLYPHONY SYSTEM UTILITIES` {instance.mention} is not a Polyphony instance"
+            )
+            return
+        if (
+            conn.execute(
+                "SELECT * FROM users WHERE id = ?", [main_account.id]
+            ).fetchone()
+            is None
+        ):
+            conn.execute("INSERT INTO users VALUES (?, NULL, NULL)", [main_account.id])
+            ctx.send(
+                f"`POLYPHONY SYSTEM UTILITIES` {main_account.mention} is a new Polyphony user. Adding to database..."
+            )
+        conn.execute(
+            "UPDATE members SET main_account_id = ? WHERE id = ?",
+            [main_account.id, instance.id],
+        )
+        ctx.send(
+            f"`POLYPHONY SYSTEM UTILITIES` {instance.mention} is now assigned to {main_account.mention}"
         )
 
 
