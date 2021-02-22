@@ -148,6 +148,13 @@ class Admin(commands.Cog):
             # Fetch member from PluralKit
             await logger.log(":hourglass: Fetching member from PluralKit...")
             member = await pk_get_member(pluralkit_member_id)
+            
+            # Error: Member not found
+            if member is None:
+                logger.title = ":x: Error Registering: Member ID invalid"
+                logger.color = discord.Color.red()
+                await logger.log(f":x: Member ID `{pluralkit_member_id}` was not found")
+                return
 
             # Error: Missing PluralKit Data
             if (
@@ -166,13 +173,6 @@ class Admin(commands.Cog):
                 await logger.log(
                     "\n:x: *Please check the privacy settings on PluralKit*"
                 )
-                return
-
-            # Error: Member not found
-            if member is None:
-                logger.title = ":x: Error Registering: Member ID invalid"
-                logger.color = discord.Color.red()
-                await logger.log(f":x: Member ID `{pluralkit_member_id}` was not found")
                 return
 
             system_name = f"__**{member['name']}**__ (`{member['id']}`)"
