@@ -29,19 +29,30 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
-        start = time.time()
+        start = time.time()  # For benchmark debug message
+
+        # Cancel if using bot command prefix (allows bot commands to run)
         if msg.content.startswith(COMMAND_PREFIX):
             return
-        members = conn.execute(
+
+        all_members = conn.execute(
             "SELECT * FROM members WHERE main_account_id == ? AND member_enabled = 1",
             [msg.author.id],
         ).fetchall()
 
-        for member in members:
+        ping_suppress = False  # Set to suppress ping. Used to prevent double ping forwarding with a proxied ping.
+
+        for member in all_members:
+            # Get autoproxy status
+            db_user = conn.execute(
+                "SELECT * FROM users WHERE id == ?", [msg.author.id]
+            ).fetchone()
+            autoproxy_mode = db_user["autoproxy_mode"]
+            autoproxy = db_user["autoproxy"]
+
+            # From the member's tags: get the prefix/suffix value (if any)
             prefix_used = None
             suffix_used = None
-
-            # Check prefix/suffix and get value
             for tag in json.loads(member["pk_proxy_tags"]):
                 if msg.content.startswith(
                     tag.get("prefix") or ""
@@ -49,26 +60,6 @@ class Events(commands.Cog):
                     prefix_used = tag.get("prefix") or ""
                     suffix_used = tag.get("suffix") or ""
                     break
-
-            # Get autoproxy info
-            db_user = conn.execute(
-                "SELECT * FROM users WHERE id == ?", [msg.author.id]
-            ).fetchone()
-            autoproxy_mode = db_user["autoproxy_mode"]
-            autoproxy = db_user["autoproxy"]
-
-            # Cancel autoproxy if prefix is used
-            # This is hacky because it was implemented later on. Probably could be more optimized.
-            if autoproxy_mode is not None and autoproxy == member["id"]:
-                for m in members:
-                    for tag in json.loads(m["pk_proxy_tags"]):
-                        if msg.content.startswith(
-                            tag["prefix"] or ""
-                        ) and msg.content.endswith(tag["suffix"] or ""):
-                            log.debug(
-                                f"{m['member_name']} ({m['pk_member_id']}): Autoproxy skipped"
-                            )
-                            autoproxy_mode = None
 
             # Check message
             if (
@@ -113,6 +104,7 @@ class Events(commands.Cog):
                     message,
                     member["token"],
                     files=[await file.to_file() for file in msg.attachments],
+                    reference=msg.reference,
                 )
                 await msg.delete()
 
@@ -123,36 +115,54 @@ class Events(commands.Cog):
                     f"{member['member_name']} ({member['pk_member_id']}): Benchmark: {timedelta(seconds=end - start)} | Protocol Roundtrip: {timedelta(seconds=self.bot.latency)}"
                 )
 
+                ping_suppress = True
+
+                break
+
         # Check for ping
-        members = conn.execute(
+        all_members = conn.execute(
             "SELECT * FROM members WHERE member_enabled = 1"
         ).fetchall()
-        for member in members:
-            if (
-                member["id"] in [m.id for m in msg.mentions]
-                and msg.author.id != member["main_account_id"]
-                and msg.author.id != member["id"]
-                and msg.author.id != self.bot.user.id
-                and msg.author.bot is False
-                and not msg.content.startswith(COMMAND_PREFIX)
-            ):
-                # Forward Ping
-                log.debug(
-                    f"Forwarding ping from {member['id']} to {member['main_account_id']}"
-                )
 
-                embed = discord.Embed(
-                    description=f"Originally to {self.bot.get_user(member['id']).mention}\n[Highlight Message]({msg.jump_url})"
-                )
-                embed.set_author(
-                    name=f"From {msg.author}",
-                    icon_url=msg.author.avatar_url,
-                )
+        if not ping_suppress:
+            for member in all_members:
+                if (
+                    member["id"] in [m.id for m in msg.mentions]
+                    and msg.author.id != member["main_account_id"]
+                    and msg.author.id != member["id"]
+                    and msg.author.id != self.bot.user.id
+                    and not msg.content.startswith(COMMAND_PREFIX)
+                ):
+                    embed = discord.Embed(
+                        description=f"Originally to {self.bot.get_user(member['id']).mention}\n[Highlight Message]({msg.jump_url})"
+                    )
+                    embed.set_author(
+                        name=f"From {msg.author}",
+                        icon_url=msg.author.avatar_url,
+                    )
 
-                await self.bot.get_channel(msg.channel.id).send(
-                    f"{self.bot.get_user(member['main_account_id']).mention}",
-                    embed=embed,
-                )
+                    if msg.author.bot is True and msg.author.id in [
+                        m["id"] for m in all_members
+                    ]:
+                        # Forward Ping from Bot
+                        log.debug(
+                            f"Forwarding ping from {member['id']} to {member['main_account_id']}"
+                        )
+                        await self.bot.get_channel(msg.channel.id).send(
+                            f"{self.bot.get_user(member['main_account_id']).mention}",
+                            embed=embed,
+                        )
+                    else:
+                        # Forward Ping
+                        log.debug(
+                            f"Forwarding ping from {member['id']} to {member['main_account_id']}"
+                        )
+
+                        await self.bot.get_channel(msg.channel.id).send(
+                            f"{self.bot.get_user(member['main_account_id']).mention}",
+                            embed=embed,
+                        )
+                    break
 
         # Delete logging message
         if DELETE_LOGS_USER_ID is not None and DELETE_LOGS_CHANNEL_ID is not None:
@@ -166,7 +176,7 @@ class Events(commands.Cog):
                     return
 
                 for oldmsg in recently_proxied_messages:
-                    member_ids = [m["id"] for m in members]
+                    member_ids = [m["id"] for m in all_members]
                     if str(oldmsg.id) in embed_text and not any(
                         [str(member_id) in embed_text for member_id in member_ids]
                     ):

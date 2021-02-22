@@ -167,6 +167,31 @@ class Debug(commands.Cog):
         )
         conn.commit()
 
+    @commands.command()
+    @commands.is_owner()
+    async def sendas(self, ctx: commands.context, account: discord.Member, *, msg: str):
+        member = conn.execute(
+            "SELECT * FROM members WHERE id == ?",
+            [account.id],
+        ).fetchone()
+        if member is None:
+            await ctx.send("`POLYPHONY SYSTEM UTILITIES` Member Not Found")
+            return
+
+        from polyphony.bot import helper
+
+        await helper.send_as(
+            ctx.message,
+            msg,
+            member["token"],
+            files=[await file.to_file() for file in ctx.message.attachments],
+        )
+        await ctx.message.delete()
+
+        from polyphony.helpers.message_cache import new_proxied_message
+
+        new_proxied_message(ctx.message)
+
 
 def setup(bot: commands.bot):
     log.debug("Debug module loaded")

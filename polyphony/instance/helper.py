@@ -35,12 +35,14 @@ class HelperInstance(discord.Client):
         if not self.invisible:
             await self.change_presence(status=discord.Status.invisible)
 
-    async def send_as(self, message: discord.Message, content, token, files=None):
+    async def send_as(
+        self, message: discord.Message, content, token, files=None, reference=None
+    ):
         await self.wait_until_ready()
         chan = self.get_channel(message.channel.id)
         async with self.lock:
             self.http.token = token
-            await chan.send(content=content, files=files)
+            await chan.send(content=content, files=files, reference=reference)
             self.http.token = TOKEN
         if not self.invisible:
             await self.change_presence(status=discord.Status.invisible)

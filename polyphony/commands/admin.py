@@ -132,6 +132,19 @@ class Admin(commands.Cog):
                 )
                 return
 
+            # Error: Duplicate Registration
+            check_duplicate = conn.execute(
+                "SELECT * FROM members WHERE pk_member_id == ?",
+                [pluralkit_member_id],
+            ).fetchone()
+            if check_duplicate:
+                logger.title = ":x: Error Registering: Member Already Registered"
+                logger.color = discord.Color.red()
+                await logger.log(
+                    f":x: Member ID `{pluralkit_member_id}` is already registered with instance {self.bot.get_user(check_duplicate['id'])}"
+                )
+                return
+
             # Fetch member from PluralKit
             await logger.log(":hourglass: Fetching member from PluralKit...")
             member = await pk_get_member(pluralkit_member_id)
@@ -194,19 +207,6 @@ class Admin(commands.Cog):
                 )
                 conn.execute("INSERT INTO users VALUES (?, NULL, NULL)", [account.id])
                 conn.commit()
-
-            # Error: Invalid ID
-            check_duplicate = conn.execute(
-                "SELECT * FROM members WHERE pk_member_id == ?",
-                [pluralkit_member_id],
-            ).fetchone()
-            if check_duplicate:
-                logger.title = ":x: Error Registering: Member Already Registered"
-                logger.color = discord.Color.red()
-                await logger.log(
-                    f":x: Member ID `{pluralkit_member_id}` is already registered with instance {self.bot.get_user(check_duplicate['id'])}"
-                )
-                return
 
             # Insert member into database
             await logger.log(":hourglass: Adding to database...")
