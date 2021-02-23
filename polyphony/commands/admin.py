@@ -115,8 +115,10 @@ class Admin(commands.Cog):
         async with ctx.channel.typing():
             # Error: Account is not a user
             if account.bot is True:
-                logger.title = "Error Registering: Bad Account Pairing"
-                logger.color = discord.Color.red()
+                await logger.set(
+                    title="Error Registering: Bad Account Pairing",
+                    color=discord.Color.red(),
+                )
                 await logger.log(f"{account.mention} is a bot user")
                 return
 
@@ -125,8 +127,10 @@ class Admin(commands.Cog):
 
             # Error: No Slots Available
             if not token:
-                logger.title = ":x: Error Registering: No Slots Available"
-                logger.color = discord.Color.red()
+                await logger.set(
+                    title=":x: Error Registering: No Slots Available",
+                    color=discord.Color.red(),
+                )
                 await logger.log(
                     f":x: No tokens in queue. Run `{self.bot.command_prefix}tokens` for information on how to add more."
                 )
@@ -138,8 +142,10 @@ class Admin(commands.Cog):
                 [pluralkit_member_id],
             ).fetchone()
             if check_duplicate:
-                logger.title = ":x: Error Registering: Member Already Registered"
-                logger.color = discord.Color.red()
+                await logger.set(
+                    title=":x: Error Registering: Member Already Registered",
+                    color=":x: Error Registering: Member Already Registered",
+                )
                 await logger.log(
                     f":x: Member ID `{pluralkit_member_id}` is already registered with instance {self.bot.get_user(check_duplicate['id'])}"
                 )
@@ -148,11 +154,13 @@ class Admin(commands.Cog):
             # Fetch member from PluralKit
             await logger.log(":hourglass: Fetching member from PluralKit...")
             member = await pk_get_member(pluralkit_member_id)
-            
+
             # Error: Member not found
             if member is None:
-                logger.title = ":x: Error Registering: Member ID invalid"
-                logger.color = discord.Color.red()
+                await logger.set(
+                    title=":x: Error Registering: Member ID invalid",
+                    color=discord.Color.red(),
+                )
                 await logger.log(f":x: Member ID `{pluralkit_member_id}` was not found")
                 return
 
@@ -162,8 +170,10 @@ class Admin(commands.Cog):
                 or member["avatar_url"] is None
                 or member["proxy_tags"] is None
             ):
-                logger.title = ":x: Error Registering: Missing PluralKit Data"
-                logger.color = discord.Color.red()
+                await logger.set(
+                    title=":x: Error Registering: Missing PluralKit Data",
+                    color=discord.Color.red(),
+                )
                 if member["name"] is None:
                     await logger.log(":warning: Member is missing a name")
                 if member["avatar_url"] is None:
@@ -190,8 +200,9 @@ class Admin(commands.Cog):
                 await confirmation.message.delete()
             else:
                 await confirmation.message.delete()
-                logger.title = ":x: Registration Cancelled"
-                logger.color = discord.Color.red()
+                await logger.set(
+                    title=":x: Registration Cancelled", color=discord.Color.red()
+                )
                 await logger.log(":x: Registration cancelled by user")
                 return
 
@@ -226,9 +237,14 @@ class Admin(commands.Cog):
                 await logger.edit(-1, ":white_check_mark: Added to database")
 
             # Error: Database Error
-            except sqlite3.Error:
-                await logger.set(title=":x: Error Registering: Database Error")
+            except sqlite3.Error as e:
+                log.error(e)
+                await logger.set(
+                    title=":x: Error Registering: Database Error",
+                    color=discord.Color.red(),
+                )
                 await logger.edit(-1, ":x: An unknown database error occurred")
+                return
 
             # Mark token as used
             conn.execute(
@@ -280,9 +296,11 @@ class Admin(commands.Cog):
                 await logger.log(sync_error_text)
 
         # Success State
-        logger.title = f":white_check_mark: Registered __{instance.user}__"
-        logger.color = discord.Color.green()
         logger.content = []
+        await logger.set(
+            title=f":white_check_mark: Registered __{instance.user}__",
+            color=discord.Color.green(),
+        )
 
         slots = conn.execute("SELECT * FROM tokens WHERE used = 0").fetchall()
         await logger.log(f":arrow_forward: **User is {instance.user.mention}**")
