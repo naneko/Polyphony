@@ -35,14 +35,14 @@ class Events(commands.Cog):
         if msg.content.startswith(COMMAND_PREFIX):
             return
 
-        all_members = conn.execute(
+        system = conn.execute(
             "SELECT * FROM members WHERE main_account_id == ? AND member_enabled = 1",
             [msg.author.id],
         ).fetchall()
 
         ping_suppress = False  # Set to suppress ping. Used to prevent double ping forwarding with a proxied ping.
 
-        for member in all_members:
+        for member in system:
             # Get autoproxy status
             db_user = conn.execute(
                 "SELECT * FROM users WHERE id == ?", [msg.author.id]
@@ -82,6 +82,8 @@ class Events(commands.Cog):
                     prefix_used is not None or suffix_used is not None
                 ):
                     log.debug(f"Setting autoproxy latch to {member['display_name']}")
+
+                    # Update database to remember current latch
                     conn.execute(
                         "UPDATE users SET autoproxy = ? WHERE id == ?",
                         [member["id"], msg.author.id],
@@ -93,12 +95,11 @@ class Events(commands.Cog):
                     len(prefix_used or "") or None : -len(suffix_used or "") or None
                 ]
 
-                # Delete and send at same time to be as fast as possible
-
                 # Trigger typing if uploading attachment
                 await msg.channel.trigger_typing() if len(msg.attachments) > 0 else None
 
                 # TODO: Autoproxy detect reaction edit override
+                # Send proxied message
                 await helper.send_as(
                     msg,
                     message,
@@ -108,14 +109,15 @@ class Events(commands.Cog):
                 )
                 await msg.delete()
 
+                # Server log channel message deletion handler (cleans up logging channel)
                 new_proxied_message(msg)
 
-                end = time.time()
+                end = time.time()  # For benchmarking purposes
                 log.debug(
                     f"{member['member_name']} ({member['pk_member_id']}): Benchmark: {timedelta(seconds=end - start)} | Protocol Roundtrip: {timedelta(seconds=self.bot.latency)}"
                 )
 
-                ping_suppress = True
+                ping_suppress = True  # Message was proxied so suppress it
 
                 break
 
@@ -123,9 +125,21 @@ class Events(commands.Cog):
         all_members = conn.execute(
             "SELECT * FROM members WHERE member_enabled = 1"
         ).fetchall()
+        # Get the database entry for the current member (if any)
+        msg_member = conn.execute(
+            "SELECT * FROM members WHERE id = ?", [msg.author.id]
+        ).fetchone()
+        # Get the system of the current member (if any)
+        if msg_member is not None:
+            system = conn.execute(
+                "SELECT * FROM members WHERE main_account_id = ?",
+                [msg_member["main_account_id"]],
+            ).fetchall()
 
+        # If a message was proxied, the ping is suppressed to avoid a double-ping from the instance and the original message
         if not ping_suppress:
             for member in all_members:
+                # Check for a valid ping
                 if (
                     member["id"] in [m.id for m in msg.mentions]
                     and msg.author.id != member["main_account_id"]
@@ -141,19 +155,22 @@ class Events(commands.Cog):
                         icon_url=msg.author.avatar_url,
                     )
 
+                    # Check if ping is from another Polyphony instance
                     if msg.author.bot is True and msg.author.id in [
                         m["id"] for m in all_members
                     ]:
-                        # Forward Ping from Bot
-                        log.debug(
-                            f"Forwarding ping from {member['id']} to {member['main_account_id']}"
-                        )
-                        await self.bot.get_channel(msg.channel.id).send(
-                            f"{self.bot.get_user(member['main_account_id']).mention}",
-                            embed=embed,
-                        )
+                        # Check member isn't part of author's own system
+                        if member["id"] not in [m["id"] for m in system]:
+                            # Forward Ping from Instance
+                            log.debug(
+                                f"Forwarding ping from {member['id']} to {member['main_account_id']} (from proxy)"
+                            )
+                            await self.bot.get_channel(msg.channel.id).send(
+                                f"{self.bot.get_user(member['main_account_id']).mention}",
+                                embed=embed,
+                            )
                     else:
-                        # Forward Ping
+                        # Forward Ping from non-polyphony instance
                         log.debug(
                             f"Forwarding ping from {member['id']} to {member['main_account_id']}"
                         )
@@ -164,7 +181,7 @@ class Events(commands.Cog):
                         )
                     break
 
-        # Delete logging message
+        # Delete logging channel message
         if DELETE_LOGS_USER_ID is not None and DELETE_LOGS_CHANNEL_ID is not None:
             if (
                 msg.channel.id == DELETE_LOGS_CHANNEL_ID
@@ -176,7 +193,7 @@ class Events(commands.Cog):
                     return
 
                 for oldmsg in recently_proxied_messages:
-                    member_ids = [m["id"] for m in all_members]
+                    member_ids = [m["id"] for m in system]
                     if str(oldmsg.id) in embed_text and not any(
                         [str(member_id) in embed_text for member_id in member_ids]
                     ):
