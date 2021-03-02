@@ -524,6 +524,7 @@ class Admin(commands.Cog):
             )
 
     @commands.command()
+    @commands.check_any(commands.is_owner(), is_mod())
     async def tokens(self, ctx: commands.context, *tokens: str):
         """
         Add tokens to queue
@@ -591,6 +592,20 @@ class Admin(commands.Cog):
             await ctx.channel.send(
                 f"To add tokens, execute `{self.bot.command_prefix}tokens` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `{self.bot.command_prefix}tokens [token] (more tokens...)`\n\n*Seriously don't paste a bot token in a server*"
             )
+
+    @commands.command()
+    @commands.check_any(commands.is_owner(), is_mod())
+    async def reset(self, ctx: commands.context):
+        await ctx.message.delete()
+        self.bot.fetch_guilds()
+        self.bot.get_all_channels()
+        await ctx.send(
+            embed=discord.Embed(
+                title=":white_check_mark: Polyphony cache has been reset",
+                color=discord.Color.green(),
+            ),
+            delete_after=5,
+        )
 
 
 def setup(bot: commands.bot):
