@@ -3,7 +3,6 @@ User commands to configure Polyphony
 """
 import asyncio
 import logging
-from datetime import timedelta
 from typing import Optional, Union
 
 import discord
@@ -386,7 +385,9 @@ class User(commands.Cog):
         """
         await ctx.message.delete()
         await ctx.send(
-            embed=discord.Embed(title=f"Pong ({timedelta(seconds=self.bot.latency)})"),
+            embed=discord.Embed(title=f"Pong").set_footer(
+                text=f"{self.bot.latency:.3g}s"
+            ),
             delete_after=10,
         )
 

@@ -108,19 +108,26 @@ class Events(commands.Cog):
                 or None
             ]
 
-            # Trigger typing if uploading attachment
-            await msg.channel.trigger_typing() if len(msg.attachments) > 0 else None
-
             # TODO: Autoproxy detect reaction edit override
             # Send proxied message
-            await helper.send_as(
-                msg,
-                message,
-                member["token"],
-                files=[await file.to_file() for file in msg.attachments],
-                reference=msg.reference,
+            await asyncio.gather(
+                helper.send_as(
+                    msg,
+                    message,
+                    member["token"],
+                    files=[await file.to_file() for file in msg.attachments],
+                    reference=msg.reference,
+                ),
+                msg.delete(),
             )
-            await msg.delete()
+            # await helper.send_as(
+            #     msg,
+            #     message,
+            #     member["token"],
+            #     files=[await file.to_file() for file in msg.attachments],
+            #     reference=msg.reference,
+            # )
+            # await msg.delete()
 
             # Server log channel message deletion handler (cleans up logging channel)
             new_proxied_message(msg)

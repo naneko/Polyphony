@@ -42,6 +42,7 @@ class HelperInstance(discord.Client):
         chan = self.get_channel(message.channel.id)
         async with self.lock:
             self.http.token = token
+            await chan.trigger_typing() if len(message.attachments) > 0 else None
             await chan.send(content=content, files=files, reference=reference)
             self.http.token = TOKEN
         if not self.invisible:
