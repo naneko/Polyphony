@@ -35,6 +35,7 @@ class Events(commands.Cog):
         if msg.content.startswith(COMMAND_PREFIX):
             return
 
+        # Get the system
         system = conn.execute(
             "SELECT * FROM members WHERE main_account_id == ? AND member_enabled = 1",
             [msg.author.id],
@@ -42,84 +43,94 @@ class Events(commands.Cog):
 
         ping_suppress = False  # Set to suppress ping. Used to prevent double ping forwarding with a proxied ping.
 
-        for member in system:
-            # Get autoproxy status
-            db_user = conn.execute(
-                "SELECT * FROM users WHERE id == ?", [msg.author.id]
-            ).fetchone()
-            autoproxy_mode = db_user["autoproxy_mode"]
-            autoproxy = db_user["autoproxy"]
+        # Set datastructures
+        member_data = {
+            "prefix": None,
+            "suffix": None,
+        }
+        member = None
 
-            # From the member's tags: get the prefix/suffix value (if any)
-            prefix_used = None
-            suffix_used = None
-            for tag in json.loads(member["pk_proxy_tags"]):
-                if msg.content.startswith(
-                    tag.get("prefix") or ""
-                ) and msg.content.endswith(tag.get("suffix") or ""):
-                    prefix_used = tag.get("prefix") or ""
-                    suffix_used = tag.get("suffix") or ""
-                    break
+        # Compile tags with member objects
+        tags = []
+        for m in system:
+            for t in json.loads(m["pk_proxy_tags"]):
+                tags.append([t, m])
 
-            # Check message
-            if (
-                prefix_used is not None
-                and suffix_used is not None
-                and msg.author.id is not member["main_account_id"]
-            ) or (
-                autoproxy_mode is not None
-                and member["id"] == autoproxy
-                and prefix_used is None
-                and suffix_used is None
-                and msg.author.id is not member["main_account_id"]
-            ):
-                log.debug(
-                    f"""{member['member_name']} ({member['pk_member_id']}): Processing new message in {msg.channel} => "{msg.content}" (attachments: {len(msg.attachments)})"""
-                )
-
-                # Set latch autoproxy
-                if autoproxy_mode == "latch" and (
-                    prefix_used is not None or suffix_used is not None
-                ):
-                    log.debug(f"Setting autoproxy latch to {member['display_name']}")
-
-                    # Update database to remember current latch
-                    conn.execute(
-                        "UPDATE users SET autoproxy = ? WHERE id == ?",
-                        [member["id"], msg.author.id],
-                    )
-                    conn.commit()
-
-                # Remove prefix/suffix
-                message = msg.content[
-                    len(prefix_used or "") or None : -len(suffix_used or "") or None
-                ]
-
-                # Trigger typing if uploading attachment
-                await msg.channel.trigger_typing() if len(msg.attachments) > 0 else None
-
-                # TODO: Autoproxy detect reaction edit override
-                # Send proxied message
-                await helper.send_as(
-                    msg,
-                    message,
-                    member["token"],
-                    files=[await file.to_file() for file in msg.attachments],
-                    reference=msg.reference,
-                )
-                await msg.delete()
-
-                # Server log channel message deletion handler (cleans up logging channel)
-                new_proxied_message(msg)
-
-                end = time.time()  # For benchmarking purposes
-                log.debug(
-                    f"{member['member_name']} ({member['pk_member_id']}): Benchmark: {timedelta(seconds=end - start)} | Protocol Roundtrip: {timedelta(seconds=self.bot.latency)}"
-                )
-
-                ping_suppress = True  # Message was proxied so suppress it
-
+        # Check tags and set member
+        for tag in tags:
+            if msg.content.startswith(
+                tag[0].get("prefix") or ""
+            ) and msg.content.endswith(tag[0].get("suffix") or ""):
+                member_data["prefix"] = tag[0].get("prefix") or ""
+                member_data["suffix"] = tag[0].get("suffix") or ""
+                member = tag[1]
                 break
+
+        # Get autoproxy status
+        ap_data = {"mode": None, "user": None}
+        db_user = conn.execute(
+            "SELECT * FROM users WHERE id == ?", [msg.author.id]
+        ).fetchone()
+        if db_user is not None:
+            ap_data["mode"] = db_user["autoproxy_mode"]
+            ap_data["user"] = db_user["autoproxy"]
+
+        # Check for autoproxy
+        if member is None and ap_data["mode"] is not None:
+            member = conn.execute(
+                "SELECT * FROM members WHERE id == ? AND member_enabled = 1",
+                [ap_data["user"]],
+            ).fetchone()
+
+        # Send message if member is set
+        if member is not None:
+            log.debug(
+                f"""{member['member_name']} ({member["pk_member_id"]}): Processing new message in {msg.channel} => "{msg.content}" (attachments: {len(msg.attachments)})"""
+            )
+
+            # Set autoproxy latch
+            if ap_data["mode"] == "latch" and (
+                member_data["prefix"] is not None or member_data["suffix"] is not None
+            ):
+                log.debug(f"Setting autoproxy latch to {member['display_name']}")
+
+                # Update database to remember current latch
+                conn.execute(
+                    "UPDATE users SET autoproxy = ? WHERE id == ?",
+                    [member["id"], msg.author.id],
+                )
+                conn.commit()
+
+            # Remove prefix/suffix
+            message = msg.content[
+                len(member_data["prefix"] or "")
+                or None : -len(member_data["suffix"] or "")
+                or None
+            ]
+
+            # Trigger typing if uploading attachment
+            await msg.channel.trigger_typing() if len(msg.attachments) > 0 else None
+
+            # TODO: Autoproxy detect reaction edit override
+            # Send proxied message
+            await helper.send_as(
+                msg,
+                message,
+                member["token"],
+                files=[await file.to_file() for file in msg.attachments],
+                reference=msg.reference,
+            )
+            await msg.delete()
+
+            # Server log channel message deletion handler (cleans up logging channel)
+            new_proxied_message(msg)
+
+            end = time.time()  # For benchmarking purposes
+            log.debug(
+                f"{member['member_name']} ({member['pk_member_id']}): Benchmark: {timedelta(seconds=end - start)} | Protocol Roundtrip: {timedelta(seconds=self.bot.latency)}"
+            )
+
+            ping_suppress = True  # Message was proxied so suppress it
 
         # Check for ping
         all_members = conn.execute(
