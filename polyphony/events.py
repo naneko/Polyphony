@@ -59,7 +59,7 @@ class Events(commands.Cog):
         # Check tags and set member
         for tag in tags:
             if msg.content.startswith(
-                    tag[0].get("prefix") or ""
+                tag[0].get("prefix") or ""
             ) and msg.content.endswith(tag[0].get("suffix") or ""):
                 member_data["prefix"] = tag[0].get("prefix") or ""
                 member_data["suffix"] = tag[0].get("suffix") or ""
@@ -90,7 +90,7 @@ class Events(commands.Cog):
 
             # Set autoproxy latch
             if ap_data["mode"] == "latch" and (
-                    member_data["prefix"] is not None or member_data["suffix"] is not None
+                member_data["prefix"] is not None or member_data["suffix"] is not None
             ):
                 log.debug(f"Setting autoproxy latch to {member['display_name']}")
 
@@ -103,10 +103,10 @@ class Events(commands.Cog):
 
             # Remove prefix/suffix
             message = msg.content[
-                      len(member_data["prefix"] or "")
-                      or None: -len(member_data["suffix"] or "")
-                               or None
-                      ]
+                len(member_data["prefix"] or "")
+                or None : -len(member_data["suffix"] or "")
+                or None
+            ]
 
             # TODO: Autoproxy detect reaction edit override
             # Send proxied message
@@ -151,11 +151,11 @@ class Events(commands.Cog):
             for member in all_members:
                 # Check for a valid ping
                 if (
-                        member["id"] in [m.id for m in msg.mentions]
-                        and msg.author.id != member["main_account_id"]
-                        and msg.author.id != member["id"]
-                        and msg.author.id != self.bot.user.id
-                        and not msg.content.startswith(COMMAND_PREFIX)
+                    member["id"] in [m.id for m in msg.mentions]
+                    and msg.author.id != member["main_account_id"]
+                    and msg.author.id != member["id"]
+                    and msg.author.id != self.bot.user.id
+                    and not msg.content.startswith(COMMAND_PREFIX)
                 ):
                     embed = discord.Embed(
                         description=f"Originally to {self.bot.get_user(member['id']).mention}\n[Highlight Message]({msg.jump_url})"
@@ -194,8 +194,8 @@ class Events(commands.Cog):
         # Delete logging channel message
         if DELETE_LOGS_USER_ID is not None and DELETE_LOGS_CHANNEL_ID is not None:
             if (
-                    msg.channel.id == DELETE_LOGS_CHANNEL_ID
-                    or msg.author.id == DELETE_LOGS_USER_ID
+                msg.channel.id == DELETE_LOGS_CHANNEL_ID
+                or msg.author.id == DELETE_LOGS_USER_ID
             ):
                 try:
                     embed_text = msg.embeds[0].description
@@ -205,7 +205,7 @@ class Events(commands.Cog):
                 for oldmsg in recently_proxied_messages:
                     member_ids = [m["id"] for m in system]
                     if str(oldmsg.id) in embed_text and not any(
-                            [str(member_id) in embed_text for member_id in member_ids]
+                        [str(member_id) in embed_text for member_id in member_ids]
                     ):
                         log.debug(
                             f"Deleting delete log message {msg.id} (was about {oldmsg.id})"
@@ -223,13 +223,13 @@ class Events(commands.Cog):
         if member is not None:
             # Delete React
             if (
-                    emoji.demojize(reaction.emoji) or ""
+                emoji.demojize(reaction.emoji) or ""
             ) == ":cross_mark:":  # Discord name: x
                 await reaction.message.delete()
 
             # Edit React
             if (
-                    emoji.demojize(reaction.emoji) or ""
+                emoji.demojize(reaction.emoji) or ""
             ) == ":memo:":  # Discord name: pencil
                 embed = discord.Embed(
                     description=f"You are now editing a [message]({reaction.message.jump_url})\nYour next message will replace it's contents.",
@@ -246,7 +246,7 @@ class Events(commands.Cog):
                     message = await self.bot.wait_for(
                         "message",
                         check=lambda message: message.author.id
-                                              == member["main_account_id"],
+                        == member["main_account_id"],
                         timeout=30,
                     )
 

@@ -22,9 +22,11 @@ def init_db():
     try:
         version = conn.execute("SELECT * FROM meta").fetchone()
     except sqlite3.OperationalError:
-        log.warning("Database version not found in database. This probably means a new database is being created. Initializing from version 0.")
+        log.warning(
+            "Database version not found in database. This probably means a new database is being created. Initializing from version 0."
+        )
         with open(
-                f"{pathlib.Path().absolute()}/migrations/v0.sqlite", "r"
+            f"{pathlib.Path().absolute()}/migrations/v0.sqlite", "r"
         ) as schema_file:
             schema = schema_file.read()
         conn.executescript(schema)
