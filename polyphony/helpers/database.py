@@ -19,16 +19,29 @@ schema_version = 4
 
 def init_db():
     """Initialize database tables migrations directory schema"""
-    version = conn.execute("SELECT * FROM meta").fetchone()
+    try:
+        version = conn.execute("SELECT * FROM meta").fetchone()
+    except sqlite3.OperationalError:
+        log.warning("Database version not found in database. This probably means a new database is being created. Initializing from version 0.")
+        with open(
+                f"{pathlib.Path().absolute()}/migrations/v0.sqlite", "r"
+        ) as schema_file:
+            schema = schema_file.read()
+        conn.executescript(schema)
+        conn.commit()
+        version = None
+
     if version is not None:
         version = version["version"]
     else:
         version = 0
+
     if version > schema_version:
         log.error(
             f"Database version {version} is newer than version {schema_version} supported by this version of Polyphony. Polyphony does not support downgrading database versions. Please update Polyphony."
         )
         exit()
+
     for v in range(0, schema_version + 1):
         if version < v:
             log.info(f"Updating database to schema version {v}")
