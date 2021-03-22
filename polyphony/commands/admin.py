@@ -581,7 +581,9 @@ class Admin(commands.Cog):
                         await logger.log("Bot token already in database")
         elif ctx.channel.type is not discord.ChannelType.private:
             await ctx.message.delete()
-            if any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
+            if any(
+                role.name in MODERATOR_ROLES for role in ctx.message.author.roles
+            ) or ctx.bot.is_owner(ctx.author):
                 try:
                     await ctx.message.author.send(
                         f"Token mode enabled for 5 minutes. Add tokens with `{self.bot.command_prefix}tokens [token] (more tokens...)` right here.\n\n*Don't paste a bot token in a server*"
@@ -591,7 +593,9 @@ class Admin(commands.Cog):
                         "Enable server DMs to use token command", delete_after=10.0
                     )
                 await session(self, ctx.message.author)
-            elif any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
+            elif any(
+                role.name in MODERATOR_ROLES for role in ctx.message.author.roles
+            ) or ctx.bot.is_owner(ctx.author):
                 await ctx.channel.send(
                     f"To add tokens, execute `{self.bot.command_prefix}tokens` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `{self.bot.command_prefix}tokens [token] (more tokens...)`\n\n*Seriously don't paste a bot token in a server*",
                     delete_after=10.0,
