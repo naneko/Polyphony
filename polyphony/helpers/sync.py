@@ -70,7 +70,6 @@ async def sync(
                 error_text += f"> {out}\n"
 
         # Update Avatar URL
-        # TODO: Download both images and compare and skip if they are the same?
         if pk_member.get("avatar_url") is not None:
             await logger.edit(
                 -1,
