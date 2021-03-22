@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import sqlite3
 from typing import List, NoReturn
@@ -51,6 +52,12 @@ async def sync(
         await instance.wait_until_ready()
 
         error_text = ""
+
+        # Update Proxy Tags
+        conn.execute(
+            "UPDATE members SET pk_proxy_tags = ? WHERE pk_member_id = ?",
+            [json.dumps(pk_member.get("proxy_tags")), member["pk_member_id"]],
+        )
 
         # Update Username
         if (
@@ -127,6 +134,8 @@ async def sync(
             await logger.log(
                 error_text if error_text.endswith("\n") else f"{error_text}\n"
             )
+
+        conn.commit()
 
         log.debug(f"Synced {instance.user}")
 
