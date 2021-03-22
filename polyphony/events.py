@@ -26,6 +26,7 @@ log = logging.getLogger("polyphony." + __name__)
 class Events(commands.Cog):
     def __init__(self, bot: discord.ext.commands.bot):
         self.bot = bot
+        self.edit_session = []
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
@@ -33,6 +34,10 @@ class Events(commands.Cog):
 
         # Cancel if using bot command prefix (allows bot commands to run)
         if msg.content.startswith(COMMAND_PREFIX):
+            return
+
+        # Skip for edit react
+        if msg.author.id in self.edit_session:
             return
 
         # Get the system
@@ -222,53 +227,57 @@ class Events(commands.Cog):
         # Check for correct user
         if member is not None:
             # Delete React
-            if (
-                emoji.demojize(reaction.emoji) or ""
-            ) == ":cross_mark:":  # Discord name: x
-                await reaction.message.delete()
+            if type(reaction.emoji) is str:
+                if (
+                    emoji.demojize(reaction.emoji) or ""
+                ) == ":cross_mark:":  # Discord name: x
+                    await reaction.message.delete()
 
-            # Edit React
-            if (
-                emoji.demojize(reaction.emoji) or ""
-            ) == ":memo:":  # Discord name: pencil
-                embed = discord.Embed(
-                    description=f"You are now editing a [message]({reaction.message.jump_url})\nYour next message will replace it's contents.",
-                    color=discord.Color.orange(),
-                )
-                embed.set_footer(text='Type "cancel" to cancel edit')
-                instructions = await reaction.message.channel.send(
-                    f"{user.mention}", embed=embed
-                )
-
-                try:
-
-                    # Wait 30 seconds for new message
-                    message = await self.bot.wait_for(
-                        "message",
-                        check=lambda message: message.author.id
-                        == member["main_account_id"],
-                        timeout=30,
+                # Edit React
+                if (
+                    emoji.demojize(reaction.emoji) or ""
+                ) == ":memo:":  # Discord name: pencil
+                    self.edit_session.append(user.id)
+                    embed = discord.Embed(
+                        description=f"You are now editing a [message]({reaction.message.jump_url})\nYour next message will replace it's contents.",
+                        color=discord.Color.orange(),
+                    )
+                    embed.set_footer(text='Type "cancel" to cancel edit')
+                    instructions = await reaction.message.channel.send(
+                        f"{user.mention}", embed=embed
                     )
 
-                    # On new message, do all the things
-                    await asyncio.gather(
-                        # Delete instructions and edit message with main bot (again, low-level is easier without ctx)
-                        instructions.delete(),
-                        # bot.http.delete_message(instructions.channel.id, instructions.id),
-                        message.delete(),
-                        # bot.http.delete_message(message.channel.id, message.id),
-                        reaction.remove(user),
-                    )
-                    # If message isn't "cancel" then momentarily switch bot tokens and edit the message
-                    if message.content.lower() != "cancel":
-                        await helper.edit_as(
-                            reaction.message, message.content, member["token"]
+                    try:
+
+                        # Wait 30 seconds for new message
+                        message = await self.bot.wait_for(
+                            "message",
+                            check=lambda message: message.author.id
+                            == member["main_account_id"],
+                            timeout=30,
                         )
 
-                # On timeout, delete instructions and reaction
-                except asyncio.TimeoutError:
-                    # Delete instructions with main bot
-                    await asyncio.gather(instructions.delete(), reaction.remove(user))
+                        # On new message, do all the things
+                        await asyncio.gather(
+                            # Delete instructions and edit message with main bot (again, low-level is easier without ctx)
+                            instructions.delete(),
+                            # bot.http.delete_message(instructions.channel.id, instructions.id),
+                            message.delete(),
+                            # bot.http.delete_message(message.channel.id, message.id),
+                            reaction.remove(user),
+                        )
+                        # If message isn't "cancel" then momentarily switch bot tokens and edit the message
+                        if message.content.lower() != "cancel":
+                            await helper.edit_as(
+                                reaction.message, message.content, member["token"]
+                            )
+
+                    # On timeout, delete instructions and reaction
+                    except asyncio.TimeoutError:
+                        # Delete instructions with main bot
+                        await asyncio.gather(instructions.delete(), reaction.remove(user))
+
+                    self.edit_session.remove(user.id)
 
 
 def setup(bot):
