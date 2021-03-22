@@ -96,7 +96,9 @@ class PolyphonyInstance(discord.Client):
             hash_old_avatar = imagehash.average_hash(Image.open(BytesIO(old_avatar)))
             cutoff = 5
 
-            log.debug(f"{self.user} ({self.pk_member_id}): Avatar Difference: {hash_avatar - hash_old_avatar}")
+            log.debug(
+                f"{self.user} ({self.pk_member_id}): Avatar Difference: {hash_avatar - hash_old_avatar}"
+            )
             if not hash_avatar - hash_old_avatar < cutoff:
                 log.debug(f"{self.user} ({self.pk_member_id}): Updating Avatar")
                 if no_timeout:
@@ -106,7 +108,9 @@ class PolyphonyInstance(discord.Client):
                     await asyncio.wait_for(self.user.edit(avatar=avatar), 10)
                 return 0
             else:
-                log.debug(f"{self.user} ({self.pk_member_id}): Skipping updating avatar because avatars are similar")
+                log.debug(
+                    f"{self.user} ({self.pk_member_id}): Skipping updating avatar because avatars are similar"
+                )
                 return 0
         except discord.HTTPException as e:
             log.debug(

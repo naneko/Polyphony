@@ -275,7 +275,9 @@ class Events(commands.Cog):
                     # On timeout, delete instructions and reaction
                     except asyncio.TimeoutError:
                         # Delete instructions with main bot
-                        await asyncio.gather(instructions.delete(), reaction.remove(user))
+                        await asyncio.gather(
+                            instructions.delete(), reaction.remove(user)
+                        )
 
                     self.edit_session.remove(user.id)
 
