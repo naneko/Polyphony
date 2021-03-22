@@ -524,7 +524,6 @@ class Admin(commands.Cog):
             )
 
     @commands.command()
-    @commands.check_any(commands.is_owner(), is_mod())
     async def tokens(self, ctx: commands.context, *tokens: str):
         """
         Add tokens to queue
@@ -583,15 +582,20 @@ class Admin(commands.Cog):
         elif ctx.channel.type is not discord.ChannelType.private:
             await ctx.message.delete()
             if any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
-                await ctx.message.author.send(
-                    f"Token mode enabled for 5 minutes. Add tokens with `{self.bot.command_prefix}tokens [token] (more tokens...)` right here.\n\n*Don't paste a bot token in a server*"
-                )
+                try:
+                    await ctx.message.author.send(
+                        f"Token mode enabled for 5 minutes. Add tokens with `{self.bot.command_prefix}tokens [token] (more tokens...)` right here.\n\n*Don't paste a bot token in a server*"
+                    )
+                except discord.errors.Forbidden:
+                    await ctx.send(
+                        "Enable server DMs to use token command", delete_after=10.0
+                    )
                 await session(self, ctx.message.author)
-        elif any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
-            await ctx.message.delete()
-            await ctx.channel.send(
-                f"To add tokens, execute `{self.bot.command_prefix}tokens` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `{self.bot.command_prefix}tokens [token] (more tokens...)`\n\n*Seriously don't paste a bot token in a server*"
-            )
+            elif any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
+                await ctx.channel.send(
+                    f"To add tokens, execute `{self.bot.command_prefix}tokens` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `{self.bot.command_prefix}tokens [token] (more tokens...)`\n\n*Seriously don't paste a bot token in a server*",
+                    delete_after=10.0,
+                )
 
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
