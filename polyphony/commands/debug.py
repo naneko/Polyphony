@@ -52,11 +52,18 @@ class Debug(commands.Cog):
     async def upgrade(self, ctx: commands.context):
         from git import Repo
 
-        with ctx.channel.typing():
-            log.warning("Upgrading bot from git repo")
-            repo = Repo("..")
-            o = repo.remotes.origin
-            o.pull()
+        try:
+            with ctx.channel.typing():
+                log.warning("Upgrading bot from git repo")
+                repo = Repo("..")
+                o = repo.remotes.origin
+                o.pull()
+        except Exception as e:
+            log.error(f"Could not pull update")
+            await ctx.send(
+                f"`POLYPHONY SYSTEM UTILITIES` Polyphony could not pull update...\n```{e}```."
+            )
+            return
 
         log.info(f"Pulled update successfully ({repo.heads[0].commit})")
 
