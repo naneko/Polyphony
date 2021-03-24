@@ -8,7 +8,7 @@ from io import BytesIO
 import discord
 import discord.ext
 import imagehash
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from polyphony.helpers.database import conn, c
 from polyphony.settings import (
@@ -91,14 +91,24 @@ class PolyphonyInstance(discord.Client):
             avatar = requests.get(url).content
             old_avatar = requests.get(self.user.avatar_url).content
 
-            log.debug(f"{self.user} ({self.pk_member_id}): Comparing Avatar")
-            hash_avatar = imagehash.average_hash(Image.open(BytesIO(avatar)))
-            hash_old_avatar = imagehash.average_hash(Image.open(BytesIO(old_avatar)))
             cutoff = 5
 
-            log.debug(
-                f"{self.user} ({self.pk_member_id}): Avatar Difference: {hash_avatar - hash_old_avatar}"
-            )
+            try:
+                log.debug(f"{self.user} ({self.pk_member_id}): Comparing Avatar")
+                hash_avatar = imagehash.average_hash(Image.open(BytesIO(avatar)))
+                hash_old_avatar = imagehash.average_hash(
+                    Image.open(BytesIO(old_avatar))
+                )
+                log.debug(
+                    f"{self.user} ({self.pk_member_id}): Avatar Difference: {hash_avatar - hash_old_avatar}"
+                )
+            except UnidentifiedImageError:
+                hash_avatar = 0
+                hash_old_avatar = 0
+                log.debug(
+                    f"{self.user} ({self.pk_member_id}): Avatar comparison failed. Resorting to just updating"
+                )
+
             if not hash_avatar - hash_old_avatar < cutoff:
                 log.debug(f"{self.user} ({self.pk_member_id}): Updating Avatar")
                 if no_timeout:
