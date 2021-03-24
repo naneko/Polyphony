@@ -149,7 +149,8 @@ class PolyphonyInstance(discord.Client):
                 role = discord.utils.get(self.get_guild(GUILD_ID).roles, name=role)
                 if role is not None:
                     remove_roles.append(role)
-        except AttributeError:
+        except AttributeError as e:
+            log.error(f"{self.user} ({self.pk_member_id}): Error updating roles: {e}")
             return "Failed to update default roles. Is the bot on the server?"
         from polyphony.bot import bot
 
