@@ -54,6 +54,7 @@ def init_db():
             conn.executescript(schema)
     conn.commit()
     log.info(f"Database initialized (Version {schema_version})")
+    return schema_version
 
 
 def insert_member(

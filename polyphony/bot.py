@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 
 from .helpers.database import init_db
+from .helpers.log_message import LogMessage
 from .instance.helper import HelperInstance
 from .settings import (
     TOKEN,
@@ -78,13 +79,9 @@ async def reload(ctx: commands.context):
     # TODO: Re-implement accounting for new system
     # TODO: Allow for full bot restart
     async with ctx.channel.typing():
-        log.info("Reloading Extensions...")
+        log.info(":hourglass: Reloading Extensions...")
 
-        msg = await ctx.send(
-            embed=discord.Embed(
-                title="Reloading extensions...", color=discord.Color.orange()
-            )
-        )
+        logger = LogMessage(ctx, title="Reloading extensions...")
 
         for extension in init_extensions:
             from discord.ext.commands import (
@@ -95,34 +92,25 @@ async def reload(ctx: commands.context):
 
             try:
                 bot.reload_extension(extension)
+                await logger.log(f":white_check_mark: Reloaded `{extension}`")
             except (
                 ExtensionNotLoaded,
                 ExtensionNotFound,
                 ExtensionFailed,
             ) as e:
                 log.exception(e)
-                await ctx.send(
-                    embed=discord.Embed(
-                        title=f"Module {extension} failed to reload",
-                        color=discord.Color.red(),
-                    )
-                )
+                await logger.log(f":x: Module `{extension}` failed to reload")
             log.debug(f"{extension} reloaded")
 
         try:
             log.info("Re-initializing database")
-            init_db()
+            v = init_db()
+            await logger.log(f":white_check_mark: Database Initialized *(Version {v})*")
         except sqlite3.OperationalError:
-            await ctx.send(
-                embed=discord.Embed(
-                    title=f"Database failed to re-initialize (i.e. upgrade)",
-                    color=discord.Color.red(),
-                )
-            )
+            await logger.log(":x: Database failed to re-initialize (i.e. upgrade)")
 
-        await msg.delete()
-        await ctx.send(
-            embed=discord.Embed(title="Reload Successful", color=discord.Color.green())
+        await logger.set(
+            title=":white_check_mark: Reload Complete", color=discord.Color.green()
         )
         log.info("Reloading complete.")
 
