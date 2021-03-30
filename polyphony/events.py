@@ -113,18 +113,15 @@ class Events(commands.Cog):
                 or None
             ]
 
-            # TODO: Autoproxy detect reaction edit override
             # Send proxied message
-            await asyncio.gather(
-                helper.send_as(
-                    msg,
-                    message,
-                    member["token"],
-                    files=[await file.to_file() for file in msg.attachments],
-                    reference=msg.reference,
-                ),
-                msg.delete(),
+            await helper.send_as(
+                msg,
+                message,
+                member["token"],
+                files=[await file.to_file() for file in msg.attachments],
+                reference=msg.reference,
             )
+            await msg.delete()
 
             # Server log channel message deletion handler (cleans up logging channel)
             new_proxied_message(msg)
@@ -258,19 +255,17 @@ class Events(commands.Cog):
                         )
 
                         # On new message, do all the things
-                        await asyncio.gather(
-                            # Delete instructions and edit message with main bot (again, low-level is easier without ctx)
-                            instructions.delete(),
-                            # bot.http.delete_message(instructions.channel.id, instructions.id),
-                            message.delete(),
-                            # bot.http.delete_message(message.channel.id, message.id),
-                            reaction.remove(user),
-                        )
                         # If message isn't "cancel" then momentarily switch bot tokens and edit the message
                         if message.content.lower() != "cancel":
                             await helper.edit_as(
                                 reaction.message, message.content, member["token"]
                             )
+                        # Delete instructions and edit message with main bot (again, low-level is easier without ctx)
+                        await instructions.delete()
+                        # bot.http.delete_message(instructions.channel.id, instructions.id),
+                        await message.delete()
+                        # bot.http.delete_message(message.channel.id, message.id),
+                        await reaction.remove(user)
 
                     # On timeout, delete instructions and reaction
                     except asyncio.TimeoutError:
