@@ -436,6 +436,7 @@ class User(commands.Cog):
 
     @commands.command()
     @is_polyphony_user()
+    # TODO make more efficient
     async def rolesync(self, ctx: commands.context, system_member: discord.Member):
         """
         Sync current roles to system member until typing `done`

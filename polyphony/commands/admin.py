@@ -299,7 +299,7 @@ class Admin(commands.Cog):
         # Success State
         logger.content = []
         await logger.set(
-            title=f":white_check_mark: Registered __{instance.user}__",
+            title=f":white_check_mark: Registered __{member['name']}__",
             color=discord.Color.green(),
         )
 

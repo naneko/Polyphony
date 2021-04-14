@@ -208,7 +208,7 @@ class Debug(commands.Cog):
 
             for member in all_members:
                 conn.execute(
-                    "UPDATE members SET id = ? WHERE token - ?",
+                    "UPDATE members SET id = ? WHERE token = ?",
                     [decode_token(member["token"]), member["token"]],
                 )
 
