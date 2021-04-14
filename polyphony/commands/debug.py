@@ -11,6 +11,7 @@ from discord.ext import commands
 
 from polyphony.helpers.checks import is_mod
 from polyphony.helpers.database import conn
+from polyphony.helpers.decode_token import decode_token
 from polyphony.helpers.log_message import LogMessage
 from polyphony.helpers.pluralkit import (
     pk_get_system,
@@ -198,6 +199,21 @@ class Debug(commands.Cog):
         from polyphony.helpers.message_cache import new_proxied_message
 
         new_proxied_message(ctx.message)
+
+    @commands.command()
+    @commands.is_owner()
+    async def refreshids(self, ctx: commands.context):
+        with ctx.typing():
+            all_members = conn.execute("SELECT * FROM members").fetchall()
+
+            for member in all_members:
+                conn.execute(
+                    "UPDATE members SET id = ? WHERE token - ?",
+                    [decode_token(member["token"]), member["token"]],
+                )
+
+            conn.commit()
+        await ctx.send("`POLYPHONY SYSTEM UTILITIES` IDs refreshed")
 
 
 def setup(bot: commands.bot):

@@ -16,6 +16,7 @@ from polyphony.helpers.database import (
     c,
     conn,
 )
+from polyphony.helpers.decode_token import decode_token
 from polyphony.helpers.log_message import LogMessage
 from polyphony.helpers.member_list import send_member_list
 from polyphony.helpers.pluralkit import pk_get_member
@@ -226,7 +227,7 @@ class Admin(commands.Cog):
                     token["token"],
                     member["id"],
                     account.id,
-                    0,
+                    decode_token(token["token"]),
                     member["name"],
                     member["display_name"],
                     member["avatar_url"],

@@ -10,7 +10,7 @@ import discord.ext
 import imagehash
 from PIL import Image, UnidentifiedImageError
 
-from polyphony.helpers.database import conn, c
+from polyphony.helpers.database import conn
 from polyphony.settings import (
     GUILD_ID,
     INSTANCE_ADD_ROLES,
@@ -44,16 +44,6 @@ class PolyphonyInstance(discord.Client):
         log.debug(f"[STARTUP] {self.user} ({self.pk_member_id})")
 
         await self.change_presence(status=discord.Status.invisible)
-
-        # Update Self ID in Database
-        with conn:
-            log.debug(
-                f"{self.user} ({self.pk_member_id}): Updating Self Account ID: {self.user.id}"
-            )
-            c.execute(
-                "UPDATE members SET id = ? WHERE pk_member_id = ?",
-                [self.user.id, self.pk_member_id],
-            )
 
         log.debug(f"[READY] {self.user} ({self.pk_member_id})")
 
