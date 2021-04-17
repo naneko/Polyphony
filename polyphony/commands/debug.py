@@ -93,10 +93,10 @@ class Debug(commands.Cog):
                 await instance.update_username(f"{random.randint(0000, 9999)}")
                 await logger.log("Clearing Nickname...")
                 await instance.update_nickname(None)
-                await logger.log("Updating Random Avatar...")
-                await instance.update_avatar(
-                    "https://picsum.photos/256", no_timeout=True
-                )
+                # await logger.log("Updating Random Avatar...")
+                # await instance.update_avatar(
+                #     "https://picsum.photos/256", no_timeout=True
+                # )
 
                 await logger.log("Updating Roles...")
                 roles = []
