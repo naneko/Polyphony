@@ -111,6 +111,7 @@ class Debug(commands.Cog):
                     "UPDATE tokens SET used = 0 WHERE token = ?",
                     [member["token"]],
                 )
+                await logger.log("Updating Database...")
                 conn.execute(
                     "DELETE FROM members WHERE token = ?",
                     [member["token"]],

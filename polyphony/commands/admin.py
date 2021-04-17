@@ -549,8 +549,18 @@ class Admin(commands.Cog):
                 await logger.init()
                 # Check token
                 await logger.log(f"Checking token #{index+1}...")
+                all_tokens = conn.execute("SELECT * FROM tokens").fetchall()
+                chk = False
+                token_client = decode_token(token)
+                for chk_token in all_tokens:
+                    if decode_token(chk_token) == token_client:
+                        chk = True
                 check_result, client_id = await check_token(token)
-                if not check_result:
+                if chk:
+                    logger.title = f"Token #{index + 1} Client ID already in database"
+                    logger.color = discord.Color.red()
+                    await logger.log("Client ID already exists in database")
+                elif not check_result:
                     logger.title = f"Token #{index+1} Invalid"
                     logger.color = discord.Color.red()
                     await logger.log("Bot token is invalid")

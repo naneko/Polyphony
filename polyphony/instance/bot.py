@@ -102,7 +102,7 @@ class PolyphonyInstance(discord.Client):
             if not hash_avatar - hash_old_avatar < cutoff:
                 log.debug(f"{self.user} ({self.pk_member_id}): Updating Avatar")
                 if no_timeout:
-                    await self.user.edit(avatar=avatar)
+                    await asyncio.wait_for(self.user.edit(avatar=avatar), 300)
                     pass
                 else:
                     await asyncio.wait_for(self.user.edit(avatar=avatar), 10)
