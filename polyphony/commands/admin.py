@@ -543,7 +543,6 @@ class Admin(commands.Cog):
             and ctx.message.author in self.token_session
         ):
             await ctx.send("Adding tokens...")
-            log.debug(tokens)
             for index, token in enumerate(tokens):
                 logger = LogMessage(ctx, title=f"Adding token #{index+1}...")
                 await logger.init()
@@ -553,7 +552,7 @@ class Admin(commands.Cog):
                 chk = False
                 token_client = decode_token(token)
                 for chk_token in all_tokens:
-                    if decode_token(chk_token) == token_client:
+                    if decode_token(str(chk_token["token"])) == token_client:
                         chk = True
                 check_result, client_id = await check_token(token)
                 if chk:
