@@ -236,7 +236,7 @@ class User(commands.Cog):
             embed = discord.Embed(
                 title=f"There is 1 slot available.", color=discord.Color.green()
             )
-        elif len(slots) > 2:
+        elif len(slots) > 1:
             embed = discord.Embed(
                 title=f"There are {len(slots)} slots available",
                 color=discord.Color.green(),
