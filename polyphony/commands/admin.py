@@ -145,7 +145,7 @@ class Admin(commands.Cog):
             if check_duplicate:
                 await logger.set(
                     title=":x: Error Registering: Member Already Registered",
-                    color=":x: Error Registering: Member Already Registered",
+                    color=discord.Color.red(),
                 )
                 await logger.log(
                     f":x: Member ID `{pluralkit_member_id}` is already registered with instance {self.bot.get_user(check_duplicate['id'])}"
