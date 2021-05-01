@@ -10,6 +10,7 @@ import discord
 from discord.ext import commands
 from disputils import BotConfirmation
 
+from polyphony.bot import helper
 from polyphony.helpers.checks import is_mod, check_token
 from polyphony.helpers.database import (
     insert_member,
@@ -617,6 +618,8 @@ class Admin(commands.Cog):
         await ctx.message.delete()
         self.bot.fetch_guilds()
         self.bot.get_all_channels()
+        helper.fetch_guilds()
+        helper.get_all_channels()
         await ctx.send(
             embed=discord.Embed(
                 title=":white_check_mark: Polyphony cache has been reset",
