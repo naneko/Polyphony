@@ -32,7 +32,7 @@ class HelperInstance(discord.Client):
             self.fetch_guilds()
             self.get_all_channels()
             msg = await self.get_channel(message.channel.id).fetch_message(message.id)
-            log.info("Edit: Attempted to update outdated cache")
+            log.info(f"Send: Channel {message.channel}:{message.channel.id} or Message {message.author}:{message.id} not found. Attempted to update outdated cache.")
         async with self.lock:
             self.http.token = token
             await msg.edit(content=content, files=files)
@@ -49,7 +49,7 @@ class HelperInstance(discord.Client):
             self.fetch_guilds()
             self.get_all_channels()
             chan = self.get_channel(message.channel.id)
-            log.info("Send: Attempted to update outdated cache")
+            log.info(f"Send: Channel {message.channel}:{message.channel.id} not found. Attempted to update outdated cache.")
         async with self.lock:
             self.http.token = token
             await chan.trigger_typing() if len(message.attachments) > 0 else None
