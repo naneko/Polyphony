@@ -29,16 +29,15 @@ class HelperInstance(discord.Client):
         await self.wait_until_ready()
         msg = await self.get_channel(message.channel.id).fetch_message(message.id)
         if msg is None:
-            self.fetch_guilds()
-            self.get_all_channels()
-            msg = await self.get_channel(message.channel.id).fetch_message(message.id)
-            log.info(f"Edit: Channel {message.channel}:{message.channel.id} or Message {message.author}:{message.id} not found. Attempted to update outdated cache.")
+            log.debug("Helper failed to edit")
+            return False
         async with self.lock:
             self.http.token = token
             await msg.edit(content=content, files=files)
             self.http.token = TOKEN
         if not self.invisible:
             await self.change_presence(status=discord.Status.invisible)
+        return True
 
     async def send_as(
         self, message: discord.Message, content, token, files=None, reference=None
@@ -46,10 +45,8 @@ class HelperInstance(discord.Client):
         await self.wait_until_ready()
         chan = self.get_channel(message.channel.id)
         if chan is None:
-            self.fetch_guilds()
-            self.get_all_channels()
-            chan = self.get_channel(message.channel.id)
-            log.info(f"Send: Channel {message.channel}:{message.channel.id} not found. Attempted to update outdated cache.")
+            log.debug("Helper failed to send")
+            return False
         async with self.lock:
             self.http.token = token
             await chan.trigger_typing() if len(message.attachments) > 0 else None
@@ -57,3 +54,4 @@ class HelperInstance(discord.Client):
             self.http.token = TOKEN
         if not self.invisible:
             await self.change_presence(status=discord.Status.invisible)
+        return True

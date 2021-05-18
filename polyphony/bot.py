@@ -36,6 +36,16 @@ log.info("Polyphony is starting...")
 # Initialize Database
 init_db()
 
+
+# Initialize Helper Thread Class
+class HelperThread:
+    def __init__(self):
+        self.running = False
+        self.thread = None
+
+
+helper_thread = HelperThread()
+
 # Load extensions
 log.debug("Loading default extensions...")
 if DEBUG is True:
@@ -48,24 +58,16 @@ for ext in init_extensions:
 log.debug("Default extensions loaded.")
 
 
-class HelperRunning:
-    def __init__(self):
-        self.running = False
-
-
-helper_running = HelperRunning()
-
-
 @bot.event
 async def on_ready():
     """
     Execute on bot initialization with the Discord API.
     """
     log.info(f"Finishing initialization...")
-    if not helper_running.running:
+    if not helper_thread.running:
         log.debug("Starting helper...")
-        asyncio.run_coroutine_threadsafe(helper.start(TOKEN), bot.loop)
-        helper_running.running = True
+        helper_thread.thread = asyncio.run_coroutine_threadsafe(helper.start(TOKEN), bot.loop)
+        helper_thread.running = True
 
 
 @bot.command()
@@ -94,9 +96,9 @@ async def reload(ctx: commands.context):
                 bot.reload_extension(extension)
                 await logger.log(f":white_check_mark: Reloaded `{extension}`")
             except (
-                ExtensionNotLoaded,
-                ExtensionNotFound,
-                ExtensionFailed,
+                    ExtensionNotLoaded,
+                    ExtensionNotFound,
+                    ExtensionFailed,
             ) as e:
                 log.exception(e)
                 await logger.log(f":x: Module `{extension}` failed to reload")

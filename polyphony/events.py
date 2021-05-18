@@ -14,6 +14,7 @@ from polyphony.helpers.message_cache import (
     new_proxied_message,
     recently_proxied_messages,
 )
+from polyphony.helpers.reset import reset
 from polyphony.settings import (
     COMMAND_PREFIX,
     DELETE_LOGS_CHANNEL_ID,
@@ -114,13 +115,14 @@ class Events(commands.Cog):
             ]
 
             # Send proxied message
-            await helper.send_as(
+            while await helper.send_as(
                 msg,
                 message,
                 member["token"],
                 files=[await file.to_file() for file in msg.attachments],
                 reference=msg.reference,
-            )
+            ) is False:
+                await reset()
             await msg.delete()
 
             # Server log channel message deletion handler (cleans up logging channel)
@@ -257,9 +259,10 @@ class Events(commands.Cog):
                         # On new message, do all the things
                         # If message isn't "cancel" then momentarily switch bot tokens and edit the message
                         if message.content.lower() != "cancel":
-                            await helper.edit_as(
+                            while await helper.edit_as(
                                 reaction.message, message.content, member["token"]
-                            )
+                            ) is False:
+                                await reset()
                         # Delete instructions and edit message with main bot (again, low-level is easier without ctx)
                         await instructions.delete()
                         # bot.http.delete_message(instructions.channel.id, instructions.id),

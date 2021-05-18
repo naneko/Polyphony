@@ -7,8 +7,11 @@ from polyphony.settings import ADMIN_LOGS_CHANNEL_ID
 log = logging.getLogger(__name__)
 
 
-async def send_to_log_channel(msg: str = None, embed: discord.Embed = None):
+async def channel_log(msg: str = None, embed: discord.Embed = None):
     from polyphony.bot import bot
+
+    if ADMIN_LOGS_CHANNEL_ID is None:
+        return
 
     channel = bot.get_channel(ADMIN_LOGS_CHANNEL_ID)
 

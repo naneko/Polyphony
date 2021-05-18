@@ -18,6 +18,7 @@ from polyphony.helpers.pluralkit import (
     pk_get_system_members,
     pk_get_member,
 )
+from polyphony.helpers.reset import reset
 from polyphony.instance.bot import PolyphonyInstance
 
 log = logging.getLogger("polyphony." + __name__)
@@ -189,12 +190,13 @@ class Debug(commands.Cog):
 
         from polyphony.bot import helper
 
-        await helper.send_as(
+        while await helper.send_as(
             ctx.message,
             msg,
             member["token"],
             files=[await file.to_file() for file in ctx.message.attachments],
-        )
+        ) is False:
+            await reset()
         await ctx.message.delete()
 
         from polyphony.helpers.message_cache import new_proxied_message

@@ -10,7 +10,6 @@ import discord
 from discord.ext import commands
 from disputils import BotConfirmation
 
-from polyphony.bot import helper
 from polyphony.helpers.checks import is_mod, check_token
 from polyphony.helpers.database import (
     insert_member,
@@ -21,13 +20,13 @@ from polyphony.helpers.decode_token import decode_token
 from polyphony.helpers.log_message import LogMessage
 from polyphony.helpers.member_list import send_member_list
 from polyphony.helpers.pluralkit import pk_get_member
+from polyphony.helpers.reset import reset
 from polyphony.helpers.sync import sync
 from polyphony.instance.bot import PolyphonyInstance
 from polyphony.settings import (
     DEFAULT_INSTANCE_PERMS,
     MODERATOR_ROLES,
-    GUILD_ID,
-)
+    GUILD_ID, )
 
 log = logging.getLogger("polyphony." + __name__)
 
@@ -615,17 +614,13 @@ class Admin(commands.Cog):
     @commands.command()
     @commands.check_any(commands.is_owner(), is_mod())
     async def reset(self, ctx: commands.context):
-        await ctx.message.delete()
-        self.bot.fetch_guilds()
-        self.bot.get_all_channels()
-        helper.fetch_guilds()
-        helper.get_all_channels()
+        with ctx.typing():
+            await reset()
         await ctx.send(
             embed=discord.Embed(
-                title=":white_check_mark: Polyphony cache has been reset",
+                title=":white_check_mark: Polyphony helper has been reset",
                 color=discord.Color.green(),
-            ),
-            delete_after=5,
+            )
         )
 
 

@@ -59,7 +59,7 @@ class PolyphonyInstance(discord.Client):
             await self.user.edit(username=f"p.{name}")
             return 0
         except discord.HTTPException as e:
-            log.debug(
+            log.info(
                 f"{self.user} ({self.pk_member_id}): Username Update Failed.\n {e.text}"
             )
             if "too fast" in e.text.lower():
@@ -113,7 +113,7 @@ class PolyphonyInstance(discord.Client):
                 )
                 return 0
         except discord.HTTPException as e:
-            log.debug(
+            log.info(
                 f"{self.user} ({self.pk_member_id}): Avatar Update Failed. \n {e.text}"
             )
             if "too fast" in e.text.lower():
@@ -140,7 +140,7 @@ class PolyphonyInstance(discord.Client):
                 if role is not None:
                     remove_roles.append(role)
         except AttributeError as e:
-            log.error(f"{self.user} ({self.pk_member_id}): Error updating roles: {e}")
+            log.info(f"{self.user} ({self.pk_member_id}): Error updating roles: {e}")
             return "Failed to update default roles. Is the bot on the server?"
         from polyphony.bot import bot
 

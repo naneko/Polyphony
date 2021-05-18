@@ -12,6 +12,7 @@ from polyphony.bot import helper
 from polyphony.helpers.checks import is_polyphony_user, is_mod
 from polyphony.helpers.database import c, conn
 from polyphony.helpers.member_list import send_member_list
+from polyphony.helpers.reset import reset
 from polyphony.helpers.sync import sync
 from polyphony.instance.bot import PolyphonyInstance
 from polyphony.settings import (
@@ -639,11 +640,12 @@ class User(commands.Cog):
                 log.debug(
                     f"Editing message {message.id} by {message.author} for {ctx.author}"
                 )
-                await helper.edit_as(
+                while await helper.edit_as(
                     message,
                     content,
                     member["token"],
-                )
+                ) is False:
+                    await reset()
         else:
             log.debug(f"Editing last Polyphony message for {ctx.author}")
             member_ids = [
@@ -655,14 +657,15 @@ class User(commands.Cog):
             ]
             async for message in ctx.channel.history():
                 if message.author.id in member_ids:
-                    await helper.edit_as(
+                    while await helper.edit_as(
                         message,
                         content,
                         conn.execute(
                             "SELECT * FROM members WHERE id == ?",
                             [message.author.id],
                         ).fetchone()["token"],
-                    )
+                    ) is False:
+                        await reset()
                     break
 
     @commands.command(name="del")
