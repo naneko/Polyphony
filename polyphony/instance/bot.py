@@ -7,8 +7,8 @@ from io import BytesIO
 
 import discord
 import discord.ext
-import imagehash
-from PIL import Image, UnidentifiedImageError
+# import imagehash
+# from PIL import Image, UnidentifiedImageError
 
 from polyphony.helpers.database import conn
 from polyphony.settings import (
@@ -77,41 +77,49 @@ class PolyphonyInstance(discord.Client):
         import requests
 
         try:
-            log.debug(f"{self.user} ({self.pk_member_id}): Getting Old and New Avatars")
+            # log.debug(f"{self.user} ({self.pk_member_id}): Getting Old and New Avatars")
             avatar = requests.get(url).content
-            old_avatar = requests.get(self.user.avatar_url).content
 
-            cutoff = 5
-
-            try:
-                log.debug(f"{self.user} ({self.pk_member_id}): Comparing Avatar")
-                hash_avatar = imagehash.average_hash(Image.open(BytesIO(avatar)))
-                hash_old_avatar = imagehash.average_hash(
-                    Image.open(BytesIO(old_avatar))
-                )
-                log.debug(
-                    f"{self.user} ({self.pk_member_id}): Avatar Difference: {hash_avatar - hash_old_avatar}"
-                )
-            except UnidentifiedImageError:
-                hash_avatar = 0
-                hash_old_avatar = 0
-                log.debug(
-                    f"{self.user} ({self.pk_member_id}): Avatar comparison failed. Resorting to just updating"
-                )
-
-            if not hash_avatar - hash_old_avatar < cutoff:
-                log.debug(f"{self.user} ({self.pk_member_id}): Updating Avatar")
-                if no_timeout:
-                    await asyncio.wait_for(self.user.edit(avatar=avatar), 300)
-                    pass
-                else:
-                    await asyncio.wait_for(self.user.edit(avatar=avatar), 10)
-                return 0
+            if no_timeout:
+                await asyncio.wait_for(self.user.edit(avatar=avatar), 300)
+                pass
             else:
-                log.debug(
-                    f"{self.user} ({self.pk_member_id}): Skipping updating avatar because avatars are similar"
-                )
-                return 0
+                await asyncio.wait_for(self.user.edit(avatar=avatar), 10)
+            return 0
+
+            # old_avatar = requests.get(self.user.avatar_url).content
+
+            # cutoff = 5
+
+            # try:
+            #     log.debug(f"{self.user} ({self.pk_member_id}): Comparing Avatar")
+            #     hash_avatar = imagehash.average_hash(Image.open(BytesIO(avatar)))
+            #     hash_old_avatar = imagehash.average_hash(
+            #         Image.open(BytesIO(old_avatar))
+            #     )
+            #     log.debug(
+            #         f"{self.user} ({self.pk_member_id}): Avatar Difference: {hash_avatar - hash_old_avatar}"
+            #     )
+            # except UnidentifiedImageError:
+            #     hash_avatar = 0
+            #     hash_old_avatar = 0
+            #     log.debug(
+            #         f"{self.user} ({self.pk_member_id}): Avatar comparison failed. Resorting to just updating"
+            #     )
+
+            # if not hash_avatar - hash_old_avatar < cutoff:
+            #     log.debug(f"{self.user} ({self.pk_member_id}): Updating Avatar")
+            #     if no_timeout:
+            #         await asyncio.wait_for(self.user.edit(avatar=avatar), 300)
+            #         pass
+            #     else:
+            #         await asyncio.wait_for(self.user.edit(avatar=avatar), 10)
+            #     return 0
+            # else:
+            #     log.debug(
+            #         f"{self.user} ({self.pk_member_id}): Skipping updating avatar because avatars are similar"
+            #     )
+            #     return 0
         except discord.HTTPException as e:
             log.info(
                 f"{self.user} ({self.pk_member_id}): Avatar Update Failed. \n {e.text}"
