@@ -35,6 +35,7 @@ async def sync(
             await asyncio.wait_for(instance.wait_until_ready(), timeout=10)
         except asyncio.TimeoutError:
             log.debug(f"Failed to sync {member['id']} due to timeout")
+            await instance.close()
             await logger.log(
                 f":x: Failed to sync <@{member['id']}> because Discord bot login timed out"  # To add: Please contact a moderator for assistance
             )
