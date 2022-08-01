@@ -9,6 +9,7 @@ import logging
 import os
 
 # from polyphony.helpers.helpers import DiscordLoggerHandler
+from pathlib import Path
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ if DATABASE_URI is None:
     log.warning(
         "Database URI was not set and hence is in the default location in the root directory of Polyphony"
     )
-    DATABASE_URI = "../polyphony.db"
+    DATABASE_URI = str(f"{Path(os.path.dirname(os.path.realpath(__file__))).parent.absolute()}/polyphony.db")
 
 if GUILD_ID == 0:
     log.error("Guild ID is not set")

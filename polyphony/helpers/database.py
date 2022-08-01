@@ -3,7 +3,8 @@ Contains all database functions.
 """
 import json
 import logging
-import pathlib
+import os
+from pathlib import Path
 import sqlite3
 
 from polyphony.settings import DATABASE_URI
@@ -26,7 +27,7 @@ def init_db():
             "Database version not found in database. This probably means a new database is being created. Initializing from version 0."
         )
         with open(
-            f"{pathlib.Path().absolute()}/migrations/v0.sqlite", "r"
+            f"{Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute()}/migrations/v0.sqlite", "r"
         ) as schema_file:
             schema = schema_file.read()
         conn.executescript(schema)
@@ -48,7 +49,7 @@ def init_db():
         if version < v:
             log.info(f"Updating database to schema version {v}")
             with open(
-                f"{pathlib.Path().absolute()}/migrations/v{v}.sqlite", "r"
+                f"{Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute()}/migrations/v{v}.sqlite", "r"
             ) as schema_file:
                 schema = schema_file.read()
             conn.executescript(schema)
