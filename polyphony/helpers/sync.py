@@ -66,10 +66,10 @@ async def sync(
                 instance.user.display_name != pk_member.get("name")
                 and pk_member.get("name") is not None
         ):
-            # await logger.edit(
-            #     i,
-            #     f":hourglass: Syncing {instance.user.mention} Username... ({i + 1}/{total})",
-            # )
+            await logger.edit(
+                i,
+                f":hourglass: Syncing {instance.user.mention} Username... ({i + 1}/{total})",
+            )
             conn.execute(
                 "UPDATE members SET display_name = ? WHERE pk_member_id = ?",
                 [pk_member.get("name"), member["pk_member_id"]],
@@ -80,10 +80,10 @@ async def sync(
 
         # Update Avatar URL
         if pk_member.get("avatar_url") is not None:
-            # await logger.edit(
-            #     i,
-            #     f":hourglass: Syncing {instance.user.mention} Avatar... ({i + 1}/{total})",
-            # )
+            await logger.edit(
+                i,
+                f":hourglass: Syncing {instance.user.mention} Avatar... ({i + 1}/{total})",
+            )
             conn.execute(
                 "UPDATE members SET pk_avatar_url = ? WHERE pk_member_id = ?",
                 [pk_member.get("avatar_url"), member["pk_member_id"]],
@@ -94,10 +94,10 @@ async def sync(
 
         # Update Nickname
         # Check if nickname is set
-        # await logger.edit(
-        #     i,
-        #     f":hourglass: Syncing {instance.user.mention} Nickname... ({i + 1}/{total})",
-        # )
+        await logger.edit(
+            i,
+            f":hourglass: Syncing {instance.user.mention} Nickname... ({i + 1}/{total})",
+        )
         if member["nickname"] != None:
             out = await instance.update_nickname(member["nickname"])
             if out < 0:
@@ -119,10 +119,10 @@ async def sync(
                 error_text += f"> Nick didn't update on {out} guild(s)\n"
 
         # Update Roles
-        # await logger.edit(
-        #     i,
-        #     f":hourglass: Syncing {instance.user.mention} Roles... ({i + 1}/{total})",
-        # )
+        await logger.edit(
+            i,
+            f":hourglass: Syncing {instance.user.mention} Roles... ({i + 1}/{total})",
+        )
         out = await instance.update_default_roles()
         if out:
             error_text += f"> {out}\n"
@@ -149,9 +149,9 @@ async def sync(
     sync_queue = [[]]
     i_batch = 0
     for i, member in enumerate(query):
-        # await logger.log(
-        #     f":hourglass: Syncing <@{member['id']}>... ({i + 1}/{total})"
-        # )
+        await logger.log(
+            f":hourglass: Syncing <@{member['id']}>... ({i + 1}/{total})"
+        )
         logger.content[i] = f":hourglass: Syncing <@{member['id']}>... ({i + 1}/{total})"
         if (i+1) % 10 == 0:
             sync_queue.append([])
