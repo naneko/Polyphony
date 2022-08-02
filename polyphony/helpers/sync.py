@@ -145,7 +145,7 @@ async def sync(
     logger.color = discord.Color.orange()
     await logger.init()
     total = len(query)
-    logger.content = [None] * total
+    logger.content = [""] * total
     sync_queue = [[]]
     i_batch = 0
     for i, member in enumerate(query):
