@@ -146,12 +146,10 @@ async def sync(
     await logger.init()
     total = len(query)
     logger.content = [""] * total
+    print(logger.content)
     sync_queue = [[]]
     i_batch = 0
     for i, member in enumerate(query):
-        await logger.log(
-            f":hourglass: Syncing <@{member['id']}>... ({i + 1}/{total})"
-        )
         logger.content[i] = f":hourglass: Syncing <@{member['id']}>... ({i + 1}/{total})"
         if (i+1) % 5 == 0:
             sync_queue.append([])
