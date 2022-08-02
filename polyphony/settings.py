@@ -40,6 +40,7 @@ ADMIN_LOGS_CHANNEL_ID: int = int(os.getenv("ADMIN_LOGS_CHANNEL_ID", 0))
 # 0 to prevent accidental "None" value from API:
 DELETE_LOGS_CHANNEL_ID: int = int(os.getenv("DELETE_LOGS_CHANNEL_ID", 0))
 DELETE_LOGS_USER_ID: int = int(os.getenv("DELETE_LOGS_USER_ID", 0))
+SYNC_BATCH_SIZE: int = int(os.getenv('SYNC_BATCH_SIZE', 5))
 
 # Debug Mode Setup
 if DEBUG is True:

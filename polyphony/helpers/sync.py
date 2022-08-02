@@ -11,6 +11,7 @@ from polyphony.helpers.database import conn
 from polyphony.helpers.log_message import LogMessage
 from polyphony.helpers.pluralkit import pk_get_member
 from polyphony.instance.bot import PolyphonyInstance
+from polyphony.settings import SYNC_BATCH_SIZE
 
 log = logging.getLogger(__name__)
 
@@ -146,12 +147,11 @@ async def sync(
     await logger.init()
     total = len(query)
     logger.content = [""] * total
-    print(logger.content)
     sync_queue = [[]]
     i_batch = 0
     for i, member in enumerate(query):
         logger.content[i] = f":hourglass: Syncing <@{member['id']}>... ({i + 1}/{total})"
-        if (i+1) % 5 == 0:
+        if i % SYNC_BATCH_SIZE == 0:
             sync_queue.append([])
             i_batch += 1
         sync_queue[i_batch].append(sync_helper(i, total, member, logger))
