@@ -21,7 +21,7 @@ async def pk_get_system(system_id: str) -> Union[dict, None]:
         with request.urlopen(f"https://api.pluralkit.me/v2/system/{system_id}") as url:
             return json.loads(url.read().decode())
     except error.URLError as e:
-        log.warning(f"Failed to get system {system_id} ({e})")
+        log.debug(f"Failed to get system {system_id} ({e})")
         return None
 
 
@@ -39,7 +39,7 @@ async def pk_get_system_members(system_id: str) -> Union[List[dict], None]:
         ) as url:
             return json.loads(url.read().decode())
     except error.URLError as e:
-        log.warning(f"Failed to get members of system {system_id} ({e})")
+        log.debug(f"Failed to get members of system {system_id} ({e})")
         return None
 
 
@@ -55,5 +55,5 @@ async def pk_get_member(member_id: str) -> Union[dict, None]:
         with request.urlopen(f"https://api.pluralkit.me/v2/members/{member_id}") as url:
             return json.loads(url.read().decode())
     except error.URLError as e:
-        log.warning(f"Failed to get members of system {member_id} ({e})")
+        log.debug(f"Failed to get members of system {member_id} ({e})")
         return None
