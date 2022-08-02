@@ -37,7 +37,7 @@ async def sync(
             log.debug(f"Failed to sync {member['id']} due to timeout")
             await instance.close()
             await logger.log(
-                f":x: Failed to sync <@{member['id']}> because Discord bot login timed out"  # To add: Please contact a moderator for assistance
+                f":x: Failed to sync <@{member['id']}> because Discord bot login timed out. The bot token was likely reset. Please contact a moderator for assistance."
             )
             continue
 

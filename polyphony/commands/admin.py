@@ -593,7 +593,7 @@ class Admin(commands.Cog):
             await ctx.message.delete()
             if any(
                 role.name in MODERATOR_ROLES for role in ctx.message.author.roles
-            ) or ctx.bot.is_owner(ctx.author):
+            ) or await ctx.bot.is_owner(ctx.author):
                 try:
                     await ctx.message.author.send(
                         f"Token mode enabled for 5 minutes. Add tokens with `{self.bot.command_prefix}tokens [token] (more tokens...)` right here.\n\n*Don't paste a bot token in a server*"
@@ -608,6 +608,96 @@ class Admin(commands.Cog):
             ) or ctx.bot.is_owner(ctx.author):
                 await ctx.channel.send(
                     f"To add tokens, execute `{self.bot.command_prefix}tokens` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `{self.bot.command_prefix}tokens [token] (more tokens...)`\n\n*Seriously don't paste a bot token in a server*",
+                    delete_after=10.0,
+                )
+
+    @commands.command()
+    async def tokenup(self, ctx: commands.context, member: discord.Member = None, token: str = None):
+        """
+        Add tokens to queue
+
+        :param ctx: Discord Context
+        :param token: Token
+        :param member: System member
+        """
+
+        # TODO: Clean orphaned tokens
+
+        async def session(self, author: discord.Member):
+            self.token_session.append(author)
+            await asyncio.sleep(300)
+            self.token_session.remove(author)
+
+        if (
+                ctx.channel.type is discord.ChannelType.private
+                and ctx.message.author in self.token_session
+        ):
+            await ctx.send("Updating token...")
+            logger = LogMessage(ctx, title=f"Updating token...")
+            await logger.init()
+            # Check token
+            await logger.log(f"Checking token...")
+
+            # Step 1: check_token
+            # Step 2: Check token decodes to match inputted ID
+
+            check_result, client_id = await check_token(token)
+            if not check_result:
+                logger.title = f"Token Invalid"
+                logger.color = discord.Color.red()
+                await logger.log("Bot token is invalid")
+
+            if decode_token(token) == member.id:
+                await logger.log("Token valid")
+                if (
+                        conn.execute(
+                            "SELECT * FROM tokens WHERE token = ?", [token]
+                        ).fetchone()
+                        is None
+                ):
+                    conn.execute("INSERT INTO tokens VALUES(?, ?)", [token, True])
+                    conn.execute(
+                        "UPDATE members SET token = ? WHERE id = ?",
+                        [token, member.id],
+                    )
+                    conn.commit()
+                    logger.title = f"Token updated"
+                    logger.color = discord.Color.green()
+
+                    await logger.send(
+                        f"Token for {member.mention} has been updated"
+                    )
+                    log.info(
+                        f"Token for {member.id} updated by {ctx.author}"
+                    )
+                else:
+                    logger.title = f"Token is already in database"
+                    logger.color = discord.Color.orange()
+                    await logger.log("Bot token already in database")
+
+            else:
+                logger.title = f"Incorrect Token"
+                logger.color = discord.Color.red()
+                await logger.log(f"Token does not belong to {member.mention}")
+        elif ctx.channel.type is not discord.ChannelType.private:
+            await ctx.message.delete()
+            if any(
+                    role.name in MODERATOR_ROLES for role in ctx.message.author.roles
+            ) or await ctx.bot.is_owner(ctx.author):
+                try:
+                    await ctx.message.author.send(
+                        f"Token mode enabled for 5 minutes. Update tokens with `{self.bot.command_prefix}tokenup [system member] [token]` right here.\n\n*Don't paste a bot token in a server*"
+                    )
+                except discord.errors.Forbidden:
+                    await ctx.send(
+                        "Enable server DMs to use tokenup command", delete_after=10.0
+                    )
+                await session(self, ctx.message.author)
+            elif any(
+                    role.name in MODERATOR_ROLES for role in ctx.message.author.roles
+            ) or ctx.bot.is_owner(ctx.author):
+                await ctx.channel.send(
+                    f"To add tokens, execute `{self.bot.command_prefix}tokenup` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `{self.bot.command_prefix}tokenup [system member] [token]`\n\n*Seriously don't paste a bot token in a server*",
                     delete_after=10.0,
                 )
 

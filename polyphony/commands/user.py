@@ -198,9 +198,18 @@ class User(commands.Cog):
         )
         embed.add_field(
             name=":floppy_disk: `;;tokens`",
-            value="> **Make sure DMs are __ON__ for the server**\n"
-            "> Run on the server. You will receive further instructions in a DM.\n"
+            value="> Add additional bot tokens to the queue to be used with `;;register`\n"
+            "> **Make sure DMs are __ON__ for the server**\n"
+            "> Run on the server WITHOUT any arguments. You will receive further instructions in a DM.\n"
             "> __Never paste tokens into the server__",
+            inline=False,
+        )
+        embed.add_field(
+            name=":arrows_counterclockwise: `;;tokenup`",
+            value="> Update a bot token for a specific system member. Can be used if Discord resets a token.\n"
+            "> **Make sure DMs are __ON__ for the server**\n"
+                  "> Run on the server WITHOUT any arguments. You will receive further instructions in a DM.\n"
+                  "> __Never paste tokens into the server__",
             inline=False,
         )
         embed.add_field(

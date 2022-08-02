@@ -4,6 +4,7 @@ Contains all database functions.
 import json
 import logging
 import os
+import shutil
 from pathlib import Path
 import sqlite3
 
@@ -15,7 +16,7 @@ c = conn.cursor()
 
 log = logging.getLogger(__name__)
 
-schema_version = 4
+schema_version = 5
 
 
 def init_db():
@@ -48,6 +49,7 @@ def init_db():
     for v in range(0, schema_version + 1):
         if version < v:
             log.info(f"Updating database to schema version {v}")
+            shutil.copyfile(DATABASE_URI, f"{DATABASE_URI}.v{version}.bak")
             with open(
                 f"{Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute()}/migrations/v{v}.sqlite", "r"
             ) as schema_file:
