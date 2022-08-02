@@ -153,7 +153,7 @@ async def sync(
             f":hourglass: Syncing <@{member['id']}>... ({i + 1}/{total})"
         )
         logger.content[i] = f":hourglass: Syncing <@{member['id']}>... ({i + 1}/{total})"
-        if (i+1) % 10 == 0:
+        if (i+1) % 5 == 0:
             sync_queue.append([])
             i_batch += 1
         sync_queue[i_batch].append(sync_helper(i, total, member, logger))
