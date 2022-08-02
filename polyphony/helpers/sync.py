@@ -15,16 +15,13 @@ from polyphony.instance.bot import PolyphonyInstance
 log = logging.getLogger(__name__)
 
 
+# TODO: 3 strike system for auto-suspend
 async def sync(
     ctx: commands.context,
     query: List[sqlite3.Row],
     message=":hourglass: Syncing Members",
 ) -> NoReturn:
-    logger = LogMessage(ctx, message)
-    logger.color = discord.Color.orange()
-    await logger.init()
-    for i, member in enumerate(query):
-
+    async def sync_helper(i: int, total: int, member, logger):
         # Create instance
         instance = PolyphonyInstance(member["pk_member_id"])
         from polyphony.bot import bot
@@ -36,26 +33,23 @@ async def sync(
         except asyncio.TimeoutError:
             log.debug(f"Failed to sync {member['id']} due to timeout")
             await instance.close()
-            await logger.log(
+            await logger.edit(
+                i,
                 f":x: Failed to sync <@{member['id']}> because Discord bot login timed out. The bot token was likely reset. Please contact a moderator for assistance."
             )
-            continue
+            return
 
-        log.debug(f"Syncing {instance.user} ({i+1}/{len(query)})")
-
-        await logger.log(
-            f":hourglass: Syncing {instance.user.mention}... ({i+1}/{len(query)})"
-        )
+        log.debug(f"Syncing {instance.user} ({i + 1}/{total})")
 
         # Pull from PluralKit
         pk_member = await pk_get_member(member["pk_member_id"])
         if pk_member is None:
             await logger.edit(
-                -1, f":x: Failed to sync {instance.user.mention} from PluralKit"
+                i, f":x: Failed to sync {instance.user.mention} from PluralKit"
             )
             log.debug(f"Failed to sync {instance.user}")
             await instance.close()
-            continue
+            return
 
         await instance.wait_until_ready()
 
@@ -69,12 +63,12 @@ async def sync(
 
         # Update Username
         if (
-            instance.user.display_name != pk_member.get("name")
-            and pk_member.get("name") is not None
+                instance.user.display_name != pk_member.get("name")
+                and pk_member.get("name") is not None
         ):
             await logger.edit(
-                -1,
-                f":hourglass: Syncing {instance.user.mention} Username... ({i+1}/{len(query)})",
+                i,
+                f":hourglass: Syncing {instance.user.mention} Username... ({i + 1}/{total})",
             )
             conn.execute(
                 "UPDATE members SET display_name = ? WHERE pk_member_id = ?",
@@ -87,8 +81,8 @@ async def sync(
         # Update Avatar URL
         if pk_member.get("avatar_url") is not None:
             await logger.edit(
-                -1,
-                f":hourglass: Syncing {instance.user.mention} Avatar... ({i+1}/{len(query)})",
+                i,
+                f":hourglass: Syncing {instance.user.mention} Avatar... ({i + 1}/{total})",
             )
             conn.execute(
                 "UPDATE members SET pk_avatar_url = ? WHERE pk_member_id = ?",
@@ -101,8 +95,8 @@ async def sync(
         # Update Nickname
         # Check if nickname is set
         await logger.edit(
-            -1,
-            f":hourglass: Syncing {instance.user.mention} Nickname... ({i+1}/{len(query)})",
+            i,
+            f":hourglass: Syncing {instance.user.mention} Nickname... ({i + 1}/{total})",
         )
         if member["nickname"] != None:
             out = await instance.update_nickname(member["nickname"])
@@ -126,27 +120,44 @@ async def sync(
 
         # Update Roles
         await logger.edit(
-            -1,
-            f":hourglass: Syncing {instance.user.mention} Roles... ({i+1}/{len(query)})",
+            i,
+            f":hourglass: Syncing {instance.user.mention} Roles... ({i + 1}/{total})",
         )
         out = await instance.update_default_roles()
         if out:
             error_text += f"> {out}\n"
 
         if error_text == "":
-            await logger.edit(-1, f":white_check_mark: Synced {instance.user.mention}")
+            await logger.edit(i, f":white_check_mark: Synced {instance.user.mention}")
         else:
+            error_text = error_text if error_text.endswith("\n") else f"{error_text}\n"
             logger.content[
-                -1
-            ] = f":warning: Synced {instance.user.mention} with errors:"
-            await logger.log(
-                error_text if error_text.endswith("\n") else f"{error_text}\n"
-            )
+                i
+            ] = f":warning: Synced {instance.user.mention} with errors:\n{error_text}"
 
         conn.commit()
 
         log.debug(f"Synced {instance.user}")
 
         await instance.close()
+
+    logger = LogMessage(ctx, message)
+    logger.color = discord.Color.orange()
+    await logger.init()
+    total = len(query)
+    sync_queue = [[]]
+    i_batch = 0
+    for i, member in enumerate(query):
+        await logger.log(
+            f":hourglass: Syncing <@{member['id']}>... ({i + 1}/{total})"
+        )
+        if (i+1) % 10 == 0:
+            sync_queue.append([])
+            i_batch += 1
+        sync_queue[i_batch].append(sync_helper(i, total, member, logger))
+
+    for i, batch in enumerate(sync_queue):
+        log.debug(f'Syncing batch {i}')
+        await asyncio.gather(*batch)
 
     await logger.set(":white_check_mark: Sync Complete", discord.Color.green())

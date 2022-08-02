@@ -34,10 +34,10 @@ log = logging.getLogger("polyphony." + __name__)
 # TODO: Error Handling
 # TODO: "Get" command to get information about a PluralKit member via system id or member id
 
-# TODO: Turn disable into deregister and turn suspend into disable
 # TODO: Deregister all suspended users (purge)
 # TODO: Enable all suspended users
 # TODO: Rescue orphaned tokens
+# TODO: Purge strikeout instances that have no meessages on the server to open up available tokens
 
 
 class Admin(commands.Cog):
