@@ -1,14 +1,17 @@
 import asyncio
 import json
 import logging
+import re
 import time
 from datetime import timedelta
 
 import discord
 import emoji
+import requests
 from discord.ext import commands
+from discord.ext.commands import EmojiConverter
 
-from polyphony.bot import helper
+from polyphony.bot import helper, bot
 from polyphony.helpers.database import conn
 from polyphony.helpers.message_cache import (
     new_proxied_message,
@@ -18,7 +21,7 @@ from polyphony.helpers.reset import reset
 from polyphony.settings import (
     COMMAND_PREFIX,
     DELETE_LOGS_CHANNEL_ID,
-    DELETE_LOGS_USER_ID,
+    DELETE_LOGS_USER_ID, GUILD_ID,
 )
 
 log = logging.getLogger("polyphony." + __name__)
@@ -121,6 +124,7 @@ class Events(commands.Cog):
                 member["token"],
                 files=[await file.to_file() for file in msg.attachments],
                 reference=msg.reference,
+                emote_cache=bot.get_guild(GUILD_ID)  # TODO: Maybe put outside of event
             ) is False:
                 await reset()
             await msg.delete()
