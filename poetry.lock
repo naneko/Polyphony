@@ -352,7 +352,7 @@ python-versions = "*"
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -379,7 +379,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [[package]]
 name = "yarl"
-version = "1.8.0"
+version = "1.8.1"
 description = "Yet another URL library"
 category = "main"
 optional = false
@@ -391,8 +391,8 @@ multidict = ">=4.0"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.9"
-content-hash = "68d1c184e498143632b4d8bd60e1037e35fd1a9601a30d4297e7729d0ec04252"
+python-versions = "~3.9"
+content-hash = "3645fdf68d2432cce974690299adba189cf24b8953cfcb1110beb2fd502591d7"
 
 [metadata.files]
 aiohttp = [

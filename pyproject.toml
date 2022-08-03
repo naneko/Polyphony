@@ -6,7 +6,7 @@ authors = []
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "~3.9"
 "discord.py" = "~1.6"
 python-dotenv = "^0.15.0"
 disputils = "^0.1.3"
