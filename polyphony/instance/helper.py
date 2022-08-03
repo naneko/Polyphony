@@ -13,6 +13,8 @@ from polyphony.settings import (
 
 log = logging.getLogger(__name__)
 
+# TODO: Process emotes for editing
+
 
 class HelperInstance(discord.Client):
     def __init__(
@@ -57,7 +59,9 @@ class HelperInstance(discord.Client):
             # TODO: remove excessive emote_cache logging after feature is thoroughly production tested
 
             async def emote_cache_helper(ch_emote):
+                log.debug(ch_emote)
                 try:
+                    emote_animated = len(re.findall(r'<a', ch_emote)) > 0
                     emote_name = re.findall(r':.+?:', ch_emote)[0][1:-1]
                     emote_id = re.findall(r':\d+>', ch_emote)[0][1:-1]
                     log.debug(f'Checking if {emote_id} (:{emote_name}:) is accessible without cache.')
@@ -65,12 +69,17 @@ class HelperInstance(discord.Client):
                         log.debug(log.debug(f'{emote_id} (:{emote_name}:) is accessible. Skipping...'))
                         return
                     log.debug(f'Getting emote image {emote_id} (:{emote_name}:)')
-                    emote_image = requests.get(f'https://cdn.discordapp.com/emojis/{emote_id}.webp').content
+                    if emote_animated:
+                        log.debug(f'{emote_id} (:{emote_name}:) is animated')
+                        emote_image = requests.get(f'https://cdn.discordapp.com/emojis/{emote_id}.gif').content
+                    else:
+                        log.debug(f'{emote_id} (:{emote_name}:) is not animated')
+                        emote_image = requests.get(f'https://cdn.discordapp.com/emojis/{emote_id}.webp').content
                     log.debug(f'Uploading emote {emote_id} (:{emote_name}:)')
                     cached_emote = await emote_cache.create_custom_emoji(name=emote_name,
                                                                          image=emote_image)
                     log.debug(f'{emote_id} (:{emote_name}:) uploaded')
-                    return ch_emote, f'<:{cached_emote.name}:{cached_emote.id}>', cached_emote
+                    return ch_emote, f'<{"a" if emote_animated else ""}:{cached_emote.name}:{cached_emote.id}>', cached_emote
                 except discord.Forbidden:
                     log.debug('Polyphony does not have permission to upload emote cache emoji')
                     return
