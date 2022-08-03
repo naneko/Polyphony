@@ -12,6 +12,7 @@ Create a `.env` file in the project root to set your environment variables. Poly
 
 **Required**
 - `TOKEN` - Discord Bot Token
+- `HELPER_TOKEN` - A separate Discord Bot Token. This is necessary for Polyphony to function.
 - `GUILD_ID` - Guild ID of server Polyphony is being used in
 
 **Role System**
