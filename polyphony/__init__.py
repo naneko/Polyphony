@@ -30,7 +30,7 @@ else:
     logger.setLevel(logging.ERROR)
 
 with open(f'{Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute()}/pyproject.toml', 'rb') as f:
-    repo = Repo("..")
+    repo = Repo(Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute())
     pyproject = tomli.load(f)
     log.info(f"Polyphony Version {pyproject['tool']['poetry']['version']} ({str(repo.head.commit)[0:6]})")
 
