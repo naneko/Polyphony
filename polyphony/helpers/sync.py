@@ -69,7 +69,7 @@ async def sync(
         ):
             await logger.edit(
                 i,
-                f":hourglass: Syncing {instance.user.mention} Username... ({i + 1}/{total})",
+                f":hourglass: Syncing {instance.user.mention} Username...",
             )
             conn.execute(
                 "UPDATE members SET display_name = ? WHERE pk_member_id = ?",
@@ -83,7 +83,7 @@ async def sync(
         if pk_member.get("avatar_url") is not None:
             await logger.edit(
                 i,
-                f":hourglass: Syncing {instance.user.mention} Avatar... ({i + 1}/{total})",
+                f":hourglass: Syncing {instance.user.mention} Avatar...",
             )
             conn.execute(
                 "UPDATE members SET pk_avatar_url = ? WHERE pk_member_id = ?",
@@ -97,7 +97,7 @@ async def sync(
         # Check if nickname is set
         await logger.edit(
             i,
-            f":hourglass: Syncing {instance.user.mention} Nickname... ({i + 1}/{total})",
+            f":hourglass: Syncing {instance.user.mention} Nickname...",
         )
         if member["nickname"] != None:
             out = await instance.update_nickname(member["nickname"])
@@ -122,7 +122,7 @@ async def sync(
         # Update Roles
         await logger.edit(
             i,
-            f":hourglass: Syncing {instance.user.mention} Roles... ({i + 1}/{total})",
+            f":hourglass: Syncing {instance.user.mention} Roles...",
         )
         out = await instance.update_default_roles()
         if out:
@@ -142,15 +142,15 @@ async def sync(
 
         await instance.close()
 
-    logger = LogMessage(ctx, message)
+    total = len(query)
+    logger = LogMessage(ctx, f'{message} ({total})')
     logger.color = discord.Color.orange()
     await logger.init()
-    total = len(query)
     logger.content = [""] * total
     sync_queue = [[]]
     i_batch = 0
     for i, member in enumerate(query):
-        logger.content[i] = f":hourglass: Syncing <@{member['id']}>... ({i + 1}/{total})"
+        logger.content[i] = f":hourglass: Syncing <@{member['id']}>..."
         if i % SYNC_BATCH_SIZE == 0:
             sync_queue.append([])
             i_batch += 1

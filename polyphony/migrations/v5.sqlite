@@ -1,4 +1,4 @@
--- Schema Version 4
+-- Schema Version 5
 
 -- Remove not null constraint from pk_avatar_url
 create table members_dg_tmp
@@ -21,7 +21,7 @@ create table members_dg_tmp
 	check (pk_keep_proxy == 1 OR pk_keep_proxy == 0),
 	check (pk_keep_proxy == 1 OR pk_keep_proxy == 0)
 
-	FOREIGN KEY(main_account_id) REFERENCES users(discord_account_id)
+	FOREIGN KEY(main_account_id) REFERENCES users(id)
     FOREIGN KEY(token) REFERENCES tokens(token)
 );
 

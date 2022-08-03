@@ -51,12 +51,6 @@ if DEBUG is True:
     logger = logging.getLogger("websockets")
     logger.setLevel(logging.WARN)
     log.info("Debug Mode Enabled")
-else:
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger("discord")
-    logger.setLevel(logging.ERROR)
-    logger = logging.getLogger("websockets")
-    logger.setLevel(logging.ERROR)
 
 # Check for token and exit if not exists
 if TOKEN is None:

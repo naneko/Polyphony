@@ -23,7 +23,7 @@ class HelperInstance(discord.Client):
 
     async def on_ready(self):
         """Execute on bot initialization with the Discord API."""
-        log.info(f"Started as {self.user}")
+        log.debug(f"Helper started as {self.user}")
 
     async def edit_as(self, message: discord.Message, content, token, files=None):
         await self.wait_until_ready()

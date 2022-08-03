@@ -31,7 +31,7 @@ init_extensions = ["commands.admin", "commands.user", "commands.debug", "events"
 # TODO: ON_ERROR() handling
 # TODO: Autoproxy (sync up typing status if possible)
 
-log.info("Polyphony is starting...")
+log.debug("Polyphony is starting...")
 
 # Initialize Database
 init_db()
@@ -63,7 +63,7 @@ async def on_ready():
     """
     Execute on bot initialization with the Discord API.
     """
-    log.info(f"Finishing initialization...")
+    log.debug(f"Finishing initialization...")
     if not helper_thread.running:
         log.debug("Starting helper...")
         helper_thread.thread = asyncio.run_coroutine_threadsafe(helper.start(TOKEN), bot.loop)
