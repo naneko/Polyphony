@@ -11,7 +11,7 @@ from .instance.helper import HelperInstance
 from .settings import (
     TOKEN,
     DEBUG,
-    COMMAND_PREFIX,
+    COMMAND_PREFIX, GUILD_ID,
 )
 
 log = logging.getLogger(__name__)
@@ -68,6 +68,16 @@ async def on_ready():
         log.debug("Starting helper...")
         helper_thread.thread = asyncio.run_coroutine_threadsafe(helper.start(TOKEN), bot.loop)
         helper_thread.running = True
+
+    # Emote cache cleanup
+    log.debug("Cleaning emote cache emotes...")
+    guild = bot.get_guild(GUILD_ID)
+    if guild:
+        for emote in guild.emojis:
+            emote = await guild.fetch_emoji(emote.id)
+            if emote.user.id == bot.user.id:
+                await emote.delete()
+    log.debug("Emote cache emote cleaning complete")
 
 
 @bot.command()

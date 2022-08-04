@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+from datetime import datetime, timedelta
 
 import discord
 import discord.ext
@@ -24,6 +25,7 @@ class HelperInstance(discord.Client):
         super().__init__(**options)
         self.lock = asyncio.Lock()
         self.invisible = False
+        self.emote_cache_rate_limit_timeout = datetime.now()
         log.debug(f"Helper initialized")
 
     async def on_ready(self):
@@ -58,16 +60,17 @@ class HelperInstance(discord.Client):
 
             # TODO: remove excessive emote_cache logging after feature is thoroughly production tested
 
-            async def emote_cache_helper(ch_emote):
+            async def emote_cache_helper(ch_emote, emote_cache):
                 log.debug(ch_emote)
                 try:
                     emote_animated = len(re.findall(r'<a', ch_emote)) > 0
                     emote_name = re.findall(r':.+?:', ch_emote)[0][1:-1]
                     emote_id = re.findall(r':\d+>', ch_emote)[0][1:-1]
                     log.debug(f'Checking if {emote_id} (:{emote_name}:) is accessible without cache.')
-                    if self.get_emoji(emote_id):
-                        log.debug(log.debug(f'{emote_id} (:{emote_name}:) is accessible. Skipping...'))
-                        return
+                    for chk_emote in emote_cache.emojis:
+                        if int(emote_id) == chk_emote.id:
+                            log.debug(log.debug(f'{emote_id} (:{emote_name}:) is accessible. Skipping...'))
+                            return
                     log.debug(f'Getting emote image {emote_id} (:{emote_name}:)')
                     if emote_animated:
                         log.debug(f'{emote_id} (:{emote_name}:) is animated')
@@ -88,27 +91,34 @@ class HelperInstance(discord.Client):
                     return
 
             # Emote cache
+            if self.emote_cache_rate_limit_timeout > datetime.now():
+                log.debug('Emote cache rate limited')
+                emote_cache = None
             if emote_cache:
                 # TODO: Potentially allow user to turn emote cache on and off
                 log.debug('Emote cache start')
                 emotes = [*set(re.findall(r'<a?:.+?:\d+>', content))]  # Remove duplicates
                 task_list = []
+                new_emotes = []
                 for emote in emotes[0:EMOTE_CACHE_MAX]:
-                    task_list.append(emote_cache_helper(emote))
+                    task_list.append(emote_cache_helper(emote, emote_cache))
 
                 log.debug('Processing emote cache...')
-                new_emotes = await asyncio.gather(*task_list)
+                try:
+                    new_emotes = await asyncio.wait_for(asyncio.gather(*task_list), timeout=3)
+                    for emote in new_emotes:
+                        if emote:
+                            content = content.replace(emote[0], emote[1])
 
-                for emote in new_emotes:
-                    if emote:
-                        content = content.replace(emote[0], emote[1])
-
-                log.debug(f'Message after emote cache => {content}')
+                    log.debug(f'Message after emote cache => {content}')
+                except asyncio.TimeoutError:
+                    log.debug('DEBUG WARNING: Emote cached timed out. Disabling for 1 minute.')
+                    self.emote_cache_rate_limit_timeout = datetime.now() + timedelta(minutes=1)
 
             await chan.send(content=content, files=files, reference=reference)
 
+            # Delete emote cache after send
             if emote_cache:
-                # Delete emote cache after send
                 log.debug('Deleting cached emotes after message send')
                 delete_list = []
                 for emote in new_emotes:
