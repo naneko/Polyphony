@@ -57,7 +57,7 @@ class Debug(commands.Cog):
         try:
             with ctx.channel.typing():
                 log.warning("Upgrading bot from git repo")
-                repo = Repo("..")
+                repo = Repo("../..")
                 o = repo.remotes.origin
                 o.pull()
         except Exception as e:

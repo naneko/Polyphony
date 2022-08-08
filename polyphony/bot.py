@@ -3,10 +3,10 @@ import logging
 import sqlite3
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from .helpers.database import init_db
-from .helpers.log_message import LogMessage
 from .instance.helper import HelperInstance
 from .settings import (
     TOKEN,
@@ -16,16 +16,24 @@ from .settings import (
 
 log = logging.getLogger(__name__)
 
-# Main Polyhony Bot Instance
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
-helper = HelperInstance(intents=intents)
 
-# Disable default help
-bot.remove_command("help")
+class Polyphony(commands.Bot):
+    def __init__(self):
+        super().__init__(intents=discord.Intents.all(), command_prefix=COMMAND_PREFIX)
+
+    async def setup_hook(self):
+        # This copies the global commands over to your guild.
+        guild_object = discord.Object(id=GUILD_ID)
+        self.tree.copy_global_to(guild=guild_object)
+        await self.tree.sync(guild=guild_object)
+
+
+# Main Polyhony Bot Instance
+bot = Polyphony()
+helper = HelperInstance(intents=discord.Intents.all())
 
 # Default Cog Extensions to be loaded
-init_extensions = ["commands.admin", "commands.user", "commands.debug", "events"]
+init_extensions = ["commands", "events"]
 
 # TODO: Better Help System (look at Blimp's)
 # TODO: ON_ERROR() handling
@@ -46,17 +54,6 @@ class HelperThread:
 
 helper_thread = HelperThread()
 
-# Load extensions
-log.debug("Loading default extensions...")
-if DEBUG is True:
-    log.info("=== DEBUG MODE ENABLED ===")
-    # init_extensions.append("commands.debug")
-
-for ext in init_extensions:
-    log.debug(f"Loading {ext}...")
-    bot.load_extension(ext)
-log.debug("Default extensions loaded.")
-
 
 @bot.event
 async def on_ready():
@@ -69,15 +66,22 @@ async def on_ready():
         helper_thread.thread = asyncio.run_coroutine_threadsafe(helper.start(TOKEN), bot.loop)
         helper_thread.running = True
 
+    # Load extensions
+    log.debug("Loading extensions...")
+    for ext in init_extensions:
+        log.debug(f"Loading {ext}...")
+        await bot.load_extension(ext, package='polyphony')
+    log.debug("Extensions loaded.")
+
     # Emote cache cleanup
-    log.debug("Cleaning emote cache emotes...")
+    log.debug("Cleaning emote cache...")
     guild = bot.get_guild(GUILD_ID)
     if guild:
         for emote in guild.emojis:
             emote = await guild.fetch_emoji(emote.id)
             if emote.user.id == bot.user.id:
                 await emote.delete()
-    log.debug("Emote cache emote cleaning complete")
+    log.debug("Emote cache cleaning complete")
 
 
 @bot.command()
@@ -103,7 +107,7 @@ async def reload(ctx: commands.context):
             )
 
             try:
-                bot.reload_extension(extension)
+                await bot.reload_extension(extension)
                 await logger.log(f":white_check_mark: Reloaded `{extension}`")
             except (
                     ExtensionNotLoaded,

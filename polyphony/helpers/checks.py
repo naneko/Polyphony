@@ -7,43 +7,15 @@ import logging
 import discord
 from discord.ext import commands
 
+from polyphony.bot import bot
 from polyphony.helpers.database import conn
 from polyphony.settings import MODERATOR_ROLES
 
 log = logging.getLogger(__name__)
 
 
-def is_mod():
-    """
-    Decorator
-    Is a moderator as defined in the settings
-    """
-
-    async def predicate(ctx: commands.context):
-        if any(role.name in MODERATOR_ROLES for role in ctx.message.author.roles):
-            return True
-        else:
-            return False
-
-    return commands.check(predicate)
-
-
-def is_polyphony_user():
-    """
-    Decorator
-    Is a Polyphony user in the users database
-    """
-    # TODO: Add error message that self deletes
-    async def predicate(ctx: commands.context):
-        user = conn.execute(
-            "SELECT * FROM users WHERE id = ?", [ctx.author.id]
-        ).fetchone()
-        if user is not None:
-            return True
-        else:
-            return False
-
-    return commands.check(predicate)
+def is_owner(interaction: discord.Interaction) -> bool:
+    return interaction.user.id == bot.owner_id
 
 
 async def check_token(token: str) -> [bool, int]:

@@ -7,17 +7,17 @@ from discord.ext import commands
 
 
 async def send_member_list(
-    ctx: commands.context, embed, member_list: List[sqlite3.Row], whoarewe=False
+    interaction: discord.Interaction, embed, member_list: List[sqlite3.Row], whoarewe=False
 ):
     if member_list is None:
         embed.add_field(name="No members where found")
 
     for member in member_list:
         if len(embed.fields) >= 9:
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             embed = discord.Embed()
-        member_user = ctx.guild.get_member(member["id"])
-        owner_user = ctx.guild.get_member(member["main_account_id"])
+        member_user = interaction.guild.get_member(member["id"])
+        owner_user = interaction.guild.get_member(member["main_account_id"])
         tags = []
         for tag in json.loads(member["pk_proxy_tags"]):
             tags.append(
@@ -48,4 +48,4 @@ async def send_member_list(
                 inline=False,
             )
 
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)

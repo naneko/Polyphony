@@ -284,10 +284,10 @@ class Events(commands.Cog):
                     self.edit_session.remove(user.id)
 
 
-def setup(bot):
+async def setup(bot):
+    await bot.add_cog(Events(bot))
     log.debug("Events module loaded")
-    bot.add_cog(Events(bot))
 
 
-def teardown(bot):
+async def teardown(bot):
     log.debug("Events module unloaded")
