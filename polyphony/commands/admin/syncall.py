@@ -11,4 +11,3 @@ class SyncAll(commands.Cog):
         self.bot = bot
 
     group = app_commands.Group(name="syncall", description="...")
-

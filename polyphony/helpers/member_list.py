@@ -7,7 +7,10 @@ from discord.ext import commands
 
 
 async def send_member_list(
-    interaction: discord.Interaction, embed, member_list: List[sqlite3.Row], whoarewe=False
+    interaction: discord.Interaction,
+    embed,
+    member_list: List[sqlite3.Row],
+    whoarewe=False,
 ):
     if member_list is None:
         embed.add_field(name="No members where found")

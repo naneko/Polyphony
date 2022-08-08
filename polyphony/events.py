@@ -21,7 +21,8 @@ from polyphony.helpers.reset import reset
 from polyphony.settings import (
     COMMAND_PREFIX,
     DELETE_LOGS_CHANNEL_ID,
-    DELETE_LOGS_USER_ID, GUILD_ID,
+    DELETE_LOGS_USER_ID,
+    GUILD_ID,
 )
 
 log = logging.getLogger("polyphony." + __name__)
@@ -118,14 +119,19 @@ class Events(commands.Cog):
             ]
 
             # Send proxied message
-            while await helper.send_as(
-                msg,
-                message,
-                member["token"],
-                files=[await file.to_file() for file in msg.attachments],
-                reference=msg.reference,
-                emote_cache=bot.get_guild(GUILD_ID)  # TODO: Maybe put outside of event
-            ) is False:
+            while (
+                await helper.send_as(
+                    msg,
+                    message,
+                    member["token"],
+                    files=[await file.to_file() for file in msg.attachments],
+                    reference=msg.reference,
+                    emote_cache=bot.get_guild(
+                        GUILD_ID
+                    ),  # TODO: Maybe put outside of event
+                )
+                is False
+            ):
                 await reset()
             await msg.delete()
 
@@ -263,9 +269,12 @@ class Events(commands.Cog):
                         # On new message, do all the things
                         # If message isn't "cancel" then momentarily switch bot tokens and edit the message
                         if message.content.lower() != "cancel":
-                            while await helper.edit_as(
-                                reaction.message, message.content, member["token"]
-                            ) is False:
+                            while (
+                                await helper.edit_as(
+                                    reaction.message, message.content, member["token"]
+                                )
+                                is False
+                            ):
                                 await reset()
                         # Delete instructions and edit message with main bot (again, low-level is easier without ctx)
                         await instructions.delete()

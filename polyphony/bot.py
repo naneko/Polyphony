@@ -4,14 +4,17 @@ import sqlite3
 
 import discord
 from discord import app_commands
+from discord.app_commands import CommandAlreadyRegistered
 from discord.ext import commands
 
+# from .helpers.checks import is_owner
 from .helpers.database import init_db
 from .instance.helper import HelperInstance
 from .settings import (
     TOKEN,
     DEBUG,
-    COMMAND_PREFIX, GUILD_ID,
+    COMMAND_PREFIX,
+    GUILD_ID,
 )
 
 log = logging.getLogger(__name__)
@@ -22,7 +25,14 @@ class Polyphony(commands.Bot):
         super().__init__(intents=discord.Intents.all(), command_prefix=COMMAND_PREFIX)
 
     async def setup_hook(self):
-        # This copies the global commands over to your guild.
+        # Load extensions
+        log.debug("Loading extensions...")
+        for ext in init_extensions:
+            log.debug(f"Loading {ext}...")
+            await bot.load_extension(ext, package="polyphony")
+        log.debug("Extensions loaded.")
+
+        # Copies global commands over to guild.
         guild_object = discord.Object(id=GUILD_ID)
         self.tree.copy_global_to(guild=guild_object)
         await self.tree.sync(guild=guild_object)
@@ -63,15 +73,10 @@ async def on_ready():
     log.debug(f"Finishing initialization...")
     if not helper_thread.running:
         log.debug("Starting helper...")
-        helper_thread.thread = asyncio.run_coroutine_threadsafe(helper.start(TOKEN), bot.loop)
+        helper_thread.thread = asyncio.run_coroutine_threadsafe(
+            helper.start(TOKEN), bot.loop
+        )
         helper_thread.running = True
-
-    # Load extensions
-    log.debug("Loading extensions...")
-    for ext in init_extensions:
-        log.debug(f"Loading {ext}...")
-        await bot.load_extension(ext, package='polyphony')
-    log.debug("Extensions loaded.")
 
     # Emote cache cleanup
     log.debug("Cleaning emote cache...")
@@ -84,20 +89,19 @@ async def on_ready():
     log.debug("Emote cache cleaning complete")
 
 
-@bot.command()
-@commands.is_owner()
-async def reload(ctx: commands.context):
-    """
-    Reload default extensions (cogs)
+if DEBUG:
 
-    :param ctx: Discord Context
-    """
-    # TODO: Re-implement accounting for new system
-    # TODO: Allow for full bot restart
-    async with ctx.channel.typing():
-        log.info(":hourglass: Reloading Extensions...")
+    @bot.tree.command()
+    # @app_commands.check(is_owner)
+    async def reload(interaction: discord.Interaction):
+        """
+        DEBUG: Reload default extensions
 
-        logger = LogMessage(ctx, title="Reloading extensions...")
+        param interaction: Discord Context
+        """
+        # TODO: Re-implement accounting for new system
+        # TODO: Allow for full bot restart
+        log.info("Reloading Extensions...")
 
         for extension in init_extensions:
             from discord.ext.commands import (
@@ -108,27 +112,51 @@ async def reload(ctx: commands.context):
 
             try:
                 await bot.reload_extension(extension)
-                await logger.log(f":white_check_mark: Reloaded `{extension}`")
+                log.debug(f"Reloaded {extension}")
+                # await logger.log(f":white_check_mark: Reloaded `{extension}`")
             except (
-                    ExtensionNotLoaded,
-                    ExtensionNotFound,
-                    ExtensionFailed,
+                ExtensionNotLoaded,
+                ExtensionNotFound,
+                ExtensionFailed,
+                CommandAlreadyRegistered,
             ) as e:
-                log.exception(e)
-                await logger.log(f":x: Module `{extension}` failed to reload")
-            log.debug(f"{extension} reloaded")
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title=":x: Failed to reload",
+                        description=e,
+                        color=discord.Color.green(),
+                    ),
+                    ephemeral=True,
+                )
+                log.error(f"{extension} failed to reload\nError: {e}")
 
         try:
-            log.info("Re-initializing database")
+            log.debug("Re-initializing database")
             v = init_db()
-            await logger.log(f":white_check_mark: Database Initialized *(Version {v})*")
-        except sqlite3.OperationalError:
-            await logger.log(":x: Database failed to re-initialize (i.e. upgrade)")
+            log.debug(f":white_check_mark: Database Initialized *(Version {v})*")
+            # await logger.log(f":white_check_mark: Database Initialized *(Version {v})*")
+        except sqlite3.OperationalError as e:
+            log.error(f"Database failed to re-initialize (i.e. upgrade)\nError {e}")
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title=":x: Failed to initialize database",
+                    description=e,
+                    color=discord.Color.green(),
+                ),
+                ephemeral=True,
+            )
 
-        await logger.set(
-            title=":white_check_mark: Reload Complete", color=discord.Color.green()
-        )
+        # await logger.set(
+        #     title=":white_check_mark: Reload Complete", color=discord.Color.green()
+        # )
         log.info("Reloading complete.")
+
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                title=":greencheck: Reload complete", color=discord.Color.green()
+            ),
+            ephemeral=True,
+        )
 
 
 bot.run(TOKEN)

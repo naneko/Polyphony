@@ -25,7 +25,8 @@ from polyphony.instance.bot import PolyphonyInstance
 from polyphony.settings import (
     DEFAULT_INSTANCE_PERMS,
     MODERATOR_ROLES,
-    GUILD_ID, )
+    GUILD_ID,
+)
 
 log = logging.getLogger("polyphony." + __name__)
 
@@ -342,7 +343,9 @@ class Admin(commands.Cog):
                 )
 
     @commands.command()
-    async def tokenup(self, ctx: commands.context, member: discord.Member = None, token: str = None):
+    async def tokenup(
+        self, ctx: commands.context, member: discord.Member = None, token: str = None
+    ):
         """
         Add tokens to queue
 
@@ -359,8 +362,8 @@ class Admin(commands.Cog):
             self.token_session.remove(author)
 
         if (
-                ctx.channel.type is discord.ChannelType.private
-                and ctx.message.author in self.token_session
+            ctx.channel.type is discord.ChannelType.private
+            and ctx.message.author in self.token_session
         ):
             await ctx.send("Updating token...")
             logger = LogMessage(ctx, title=f"Updating token...")
@@ -380,10 +383,10 @@ class Admin(commands.Cog):
             if decode_token(token) == member.id:
                 await logger.log("Token valid")
                 if (
-                        conn.execute(
-                            "SELECT * FROM tokens WHERE token = ?", [token]
-                        ).fetchone()
-                        is None
+                    conn.execute(
+                        "SELECT * FROM tokens WHERE token = ?", [token]
+                    ).fetchone()
+                    is None
                 ):
                     conn.execute("INSERT INTO tokens VALUES(?, ?)", [token, True])
                     conn.execute(
@@ -394,12 +397,8 @@ class Admin(commands.Cog):
                     logger.title = f"Token updated"
                     logger.color = discord.Color.green()
 
-                    await logger.send(
-                        f"Token for {member.mention} has been updated"
-                    )
-                    log.info(
-                        f"Token for {member.id} updated by {ctx.author}"
-                    )
+                    await logger.send(f"Token for {member.mention} has been updated")
+                    log.info(f"Token for {member.id} updated by {ctx.author}")
                 else:
                     logger.title = f"Token is already in database"
                     logger.color = discord.Color.orange()
@@ -412,7 +411,7 @@ class Admin(commands.Cog):
         elif ctx.channel.type is not discord.ChannelType.private:
             await ctx.message.delete()
             if any(
-                    role.name in MODERATOR_ROLES for role in ctx.message.author.roles
+                role.name in MODERATOR_ROLES for role in ctx.message.author.roles
             ) or await ctx.bot.is_owner(ctx.author):
                 try:
                     await ctx.message.author.send(
@@ -424,7 +423,7 @@ class Admin(commands.Cog):
                     )
                 await session(self, ctx.message.author)
             elif any(
-                    role.name in MODERATOR_ROLES for role in ctx.message.author.roles
+                role.name in MODERATOR_ROLES for role in ctx.message.author.roles
             ) or ctx.bot.is_owner(ctx.author):
                 await ctx.channel.send(
                     f"To add tokens, execute `{self.bot.command_prefix}tokenup` as a moderator on a server **WITHOUT A BOT TOKEN**. Then in DMs, use `{self.bot.command_prefix}tokenup [system member] [token]`\n\n*Seriously don't paste a bot token in a server*",

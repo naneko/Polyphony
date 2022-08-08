@@ -28,7 +28,8 @@ def init_db():
             "Database version not found in database. This probably means a new database is being created. Initializing from version 0."
         )
         with open(
-            f"{Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute()}/migrations/v0.sqlite", "r"
+            f"{Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute()}/migrations/v0.sqlite",
+            "r",
         ) as schema_file:
             schema = schema_file.read()
         conn.executescript(schema)
@@ -51,7 +52,8 @@ def init_db():
             log.info(f"Updating database to schema version {v}")
             shutil.copyfile(DATABASE_URI, f"{DATABASE_URI}.v{version}.bak")
             with open(
-                f"{Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute()}/migrations/v{v}.sqlite", "r"
+                f"{Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute()}/migrations/v{v}.sqlite",
+                "r",
             ) as schema_file:
                 schema = schema_file.read()
             conn.executescript(schema)

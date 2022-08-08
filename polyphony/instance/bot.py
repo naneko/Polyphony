@@ -7,6 +7,7 @@ from io import BytesIO
 
 import discord
 import discord.ext
+
 # import imagehash
 # from PIL import Image, UnidentifiedImageError
 

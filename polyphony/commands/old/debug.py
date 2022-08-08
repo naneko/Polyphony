@@ -190,12 +190,15 @@ class Debug(commands.Cog):
 
         from polyphony.bot import helper
 
-        while await helper.send_as(
-            ctx.message,
-            msg,
-            member["token"],
-            files=[await file.to_file() for file in ctx.message.attachments],
-        ) is False:
+        while (
+            await helper.send_as(
+                ctx.message,
+                msg,
+                member["token"],
+                files=[await file.to_file() for file in ctx.message.attachments],
+            )
+            is False
+        ):
             await reset()
         await ctx.message.delete()
 

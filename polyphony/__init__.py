@@ -29,14 +29,21 @@ else:
     logging.getLogger("discord").setLevel(logging.ERROR)
     logging.getLogger("websockets").setLevel(logging.ERROR)
 
-with open(f'{Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute()}/pyproject.toml', 'rb') as f:
+with open(
+    f"{Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute()}/pyproject.toml",
+    "rb",
+) as f:
     repo = Repo(Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute())
     pyproject = tomli.load(f)
-    log.info(f"Polyphony Version {pyproject['tool']['poetry']['version']} ({str(repo.head.commit)[0:6]})")
+    log.info(
+        f"Polyphony Version {pyproject['tool']['poetry']['version']} ({str(repo.head.commit)[0:6]})"
+    )
 
 try:
     import polyphony.bot
     import polyphony.commands
     import polyphony.settings
 except ImportError as e:
-    log.error(f"Polyphony sub-modules Not Found. Are you in the right working directory?\nSubmodule Error: {e}")
+    log.error(
+        f"Polyphony sub-modules Not Found. Are you in the right working directory?\nSubmodule Error: {e}"
+    )

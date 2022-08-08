@@ -208,8 +208,8 @@ class User(commands.Cog):
             name=":arrows_counterclockwise: `;;tokenup`",
             value="> Update a bot token for a specific system member. Can be used if Discord resets a token.\n"
             "> **Make sure DMs are __ON__ for the server**\n"
-                  "> Run on the server WITHOUT any arguments. You will receive further instructions in a DM.\n"
-                  "> __Never paste tokens into the server__",
+            "> Run on the server WITHOUT any arguments. You will receive further instructions in a DM.\n"
+            "> __Never paste tokens into the server__",
             inline=False,
         )
         embed.add_field(
@@ -649,11 +649,14 @@ class User(commands.Cog):
                 log.debug(
                     f"Editing message {message.id} by {message.author} for {ctx.author}"
                 )
-                while await helper.edit_as(
-                    message,
-                    content,
-                    member["token"],
-                ) is False:
+                while (
+                    await helper.edit_as(
+                        message,
+                        content,
+                        member["token"],
+                    )
+                    is False
+                ):
                     await reset()
         else:
             log.debug(f"Editing last Polyphony message for {ctx.author}")
@@ -666,14 +669,17 @@ class User(commands.Cog):
             ]
             async for message in ctx.channel.history():
                 if message.author.id in member_ids:
-                    while await helper.edit_as(
-                        message,
-                        content,
-                        conn.execute(
-                            "SELECT * FROM members WHERE id == ?",
-                            [message.author.id],
-                        ).fetchone()["token"],
-                    ) is False:
+                    while (
+                        await helper.edit_as(
+                            message,
+                            content,
+                            conn.execute(
+                                "SELECT * FROM members WHERE id == ?",
+                                [message.author.id],
+                            ).fetchone()["token"],
+                        )
+                        is False
+                    ):
                         await reset()
                     break
 

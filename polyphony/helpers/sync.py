@@ -36,7 +36,7 @@ async def sync(
             await instance.close()
             await logger.edit(
                 i,
-                f":x: Failed to sync <@{member['id']}> because Discord bot login timed out. The bot token was likely reset. Please contact a moderator for assistance."
+                f":x: Failed to sync <@{member['id']}> because Discord bot login timed out. The bot token was likely reset. Please contact a moderator for assistance.",
             )
             return
 
@@ -64,8 +64,8 @@ async def sync(
 
         # Update Username
         if (
-                instance.user.display_name != pk_member.get("name")
-                and pk_member.get("name") is not None
+            instance.user.display_name != pk_member.get("name")
+            and pk_member.get("name") is not None
         ):
             await logger.edit(
                 i,
@@ -143,7 +143,7 @@ async def sync(
         await instance.close()
 
     total = len(query)
-    logger = LogMessage(ctx, f'{message} ({total})')
+    logger = LogMessage(ctx, f"{message} ({total})")
     logger.color = discord.Color.orange()
     await logger.init()
     logger.content = [""] * total
@@ -159,7 +159,7 @@ async def sync(
     await logger.update()
 
     for i, batch in enumerate(sync_queue):
-        log.debug(f'Syncing batch {i}')
+        log.debug(f"Syncing batch {i}")
         await asyncio.gather(*batch)
 
     await logger.set(":white_check_mark: Sync Complete", discord.Color.green())

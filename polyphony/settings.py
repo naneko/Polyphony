@@ -40,8 +40,8 @@ ADMIN_LOGS_CHANNEL_ID: int = int(os.getenv("ADMIN_LOGS_CHANNEL_ID", 0))
 # 0 to prevent accidental "None" value from API:
 DELETE_LOGS_CHANNEL_ID: int = int(os.getenv("DELETE_LOGS_CHANNEL_ID", 0))
 DELETE_LOGS_USER_ID: int = int(os.getenv("DELETE_LOGS_USER_ID", 0))
-SYNC_BATCH_SIZE: int = int(os.getenv('SYNC_BATCH_SIZE', 5))
-EMOTE_CACHE_MAX: int = int(os.getenv('EMOTE_CACHE_MAX', 5))
+SYNC_BATCH_SIZE: int = int(os.getenv("SYNC_BATCH_SIZE", 5))
+EMOTE_CACHE_MAX: int = int(os.getenv("EMOTE_CACHE_MAX", 5))
 
 # Debug Mode Setup
 if DEBUG is True:
@@ -63,7 +63,9 @@ if DATABASE_URI is None:
     log.warning(
         "Database URI was not set and hence is in the default location in the root directory of Polyphony"
     )
-    DATABASE_URI = str(f"{Path(os.path.dirname(os.path.realpath(__file__))).parent.absolute()}/polyphony.db")
+    DATABASE_URI = str(
+        f"{Path(os.path.dirname(os.path.realpath(__file__))).parent.absolute()}/polyphony.db"
+    )
 
 if GUILD_ID == 0:
     log.error("Guild ID is not set")
