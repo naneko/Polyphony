@@ -9,6 +9,7 @@ log = logging.getLogger(__name__)
 async def reset():
     log.warning("Resetting helper thread")
     await helper.logout()
+    await helper.close()
     helper.clear()
     helper_thread.running = False
     helper_thread.thread.cancel()

@@ -190,13 +190,21 @@ class Debug(commands.Cog):
 
         from polyphony.bot import helper
 
+        attempts = 0
         while await helper.send_as(
             ctx.message,
             msg,
             member["token"],
             files=[await file.to_file() for file in ctx.message.attachments],
-        ) is False:
+        ) is False and attempts < 3:
+            log.debug(f"Helper failed to send (attempt {attempts} of 3)")
+            attempts += 1
             await reset()
+        if attempts <= 3:
+            log.warning(
+                f"""{member['member_name']} ({member["pk_member_id"]}): Message in {ctx.channel} failed to send => "{msg}" """
+            )
+            return
         await ctx.message.delete()
 
         from polyphony.helpers.message_cache import new_proxied_message

@@ -118,6 +118,7 @@ class Events(commands.Cog):
             ]
 
             # Send proxied message
+            attempts = 0
             while await helper.send_as(
                 msg,
                 message,
@@ -126,7 +127,14 @@ class Events(commands.Cog):
                 reference=msg.reference,
                 emote_cache=bot.get_guild(GUILD_ID)  # TODO: Maybe put outside of event
             ) is False:
+                log.debug(f"Helper failed to send (attempt {attempts} of 3)")
+                attempts += 1
                 await reset()
+            if attempts <= 3:
+                log.error(
+                    f"""{member['member_name']} ({member["pk_member_id"]}): Message in {msg.channel} failed to send => "{msg.content}" (attachments: {len(msg.attachments)})"""
+                )
+                return
             await msg.delete()
 
             # Server log channel message deletion handler (cleans up logging channel)
