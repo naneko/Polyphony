@@ -63,10 +63,10 @@ async def check_token(token: str) -> [bool, int]:
         log.debug("Attempting login...")
         loop = asyncio.get_event_loop()
         loop.create_task(test_client.start(token))
-        await test_client.wait_until_ready()
+        await asyncio.wait_for(test_client.wait_until_ready(), timeout=3)
         client_id = test_client.user.id
-        log.debug("Login successs")
-    except discord.LoginFailure:
+        log.debug("Login success")
+    except asyncio.exceptions.TimeoutError:  # Intentionally broad exception catch
         log.debug("Bot token invalid")
         out = False
     finally:
