@@ -117,6 +117,11 @@ class Events(commands.Cog):
                 or None
             ]
 
+            if msg.mentions:
+                mention_author = True
+            else:
+                mention_author = False
+
             # Send proxied message
             attempts = 0
             while await helper.send_as(
@@ -125,12 +130,13 @@ class Events(commands.Cog):
                 member["token"],
                 files=[await file.to_file() for file in msg.attachments],
                 reference=msg.reference,
-                emote_cache=bot.get_guild(GUILD_ID)  # TODO: Maybe put outside of event
+                emote_cache=bot.get_guild(GUILD_ID),  # TODO: Maybe put outside of event
+                mention_author=mention_author
             ) is False:
                 log.debug(f"Helper failed to send (attempt {attempts} of 3)")
                 attempts += 1
                 await reset()
-            if attempts <= 3:
+            if attempts >= 3:
                 log.error(
                     f"""{member['member_name']} ({member["pk_member_id"]}): Message in {msg.channel} failed to send => "{msg.content}" (attachments: {len(msg.attachments)})"""
                 )

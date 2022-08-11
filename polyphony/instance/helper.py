@@ -47,7 +47,7 @@ class HelperInstance(discord.Client):
         return True
 
     async def send_as(
-        self, message: discord.Message, content, token, files=None, reference=None, emote_cache=None
+        self, message: discord.Message, content, token, files=None, reference=None, emote_cache=None, mention_author=None
     ):
         await self.wait_until_ready()
         chan = self.get_channel(message.channel.id)
@@ -70,7 +70,7 @@ class HelperInstance(discord.Client):
                     for chk_emote in emote_cache.emojis:
                         if int(emote_id) == chk_emote.id:
                             log.debug(log.debug(f'{emote_id} (:{emote_name}:) is accessible. Skipping...'))
-                            return
+                            return False
                     log.debug(f'Getting emote image {emote_id} (:{emote_name}:)')
                     if emote_animated:
                         log.debug(f'{emote_id} (:{emote_name}:) is animated')
@@ -85,10 +85,10 @@ class HelperInstance(discord.Client):
                     return ch_emote, f'<{"a" if emote_animated else ""}:{cached_emote.name}:{cached_emote.id}>', cached_emote
                 except discord.Forbidden:
                     log.debug('Polyphony does not have permission to upload emote cache emoji')
-                    return
+                    return False
                 except discord.HTTPException as e:
                     log.debug(f'Failed to upload emote cache emoji\n{e}')
-                    return
+                    return False
 
             # Emote cache
             if self.emote_cache_rate_limit_timeout > datetime.now():
@@ -115,7 +115,7 @@ class HelperInstance(discord.Client):
                     log.debug('DEBUG WARNING: Emote cached timed out. Disabling for 1 minute.')
                     self.emote_cache_rate_limit_timeout = datetime.now() + timedelta(minutes=1)
 
-            await chan.send(content=content, files=files, reference=reference)
+            await chan.send(content=content, files=files, reference=reference, mention_author=mention_author)
 
             # Delete emote cache after send
             if emote_cache:
