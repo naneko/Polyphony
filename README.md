@@ -1,6 +1,8 @@
 # Polyphony
 A more robust implementation of PluralKit that hooks into the PluralKit API
 
+[Join our support and development server](https://discord.gg/WuuVJ72M4r)
+
 # How to Run
 ## Step 1: Create a bot
 - Create a new bot using the [Discord Developer Portal](https://discord.com/developers/applications)
