@@ -19,7 +19,7 @@ from polyphony.helpers.database import (
 from polyphony.helpers.decode_token import decode_token
 from polyphony.helpers.log_message import LogMessage
 from polyphony.helpers.member_list import send_member_list
-from polyphony.helpers.pluralkit import pk_get_member
+from polyphony.helpers.pluralkit import pk_get_member, pk_get_system_members
 from polyphony.helpers.reset import reset
 from polyphony.helpers.sync import sync
 from polyphony.instance.bot import PolyphonyInstance
@@ -124,10 +124,10 @@ class Admin(commands.Cog):
                 return
 
             # Get available tokens
-            token = conn.execute("SELECT * FROM tokens WHERE used == 0").fetchone()
+            tokens: list[dict] = conn.execute("SELECT * FROM tokens WHERE used == 0").fetchall()
 
             # Error: No Slots Available
-            if not token:
+            if len(tokens) == 0:
                 await logger.set(
                     title=":x: Error Registering: No Slots Available",
                     color=discord.Color.red(),
@@ -137,182 +137,206 @@ class Admin(commands.Cog):
                 )
                 return
 
-            # Error: Duplicate Registration
-            check_duplicate = conn.execute(
-                "SELECT * FROM members WHERE pk_member_id == ?",
-                [pluralkit_member_id],
-            ).fetchone()
-            if check_duplicate:
-                await logger.set(
-                    title=":x: Error Registering: Member Already Registered",
-                    color=discord.Color.red(),
-                )
-                await logger.log(
-                    f":x: Member ID `{pluralkit_member_id}` is already registered with instance {self.bot.get_user(check_duplicate['id'])}"
-                )
-                return
-
-            # Fetch member from PluralKit
-            await logger.log(":hourglass: Fetching member from PluralKit...")
-            member = await pk_get_member(pluralkit_member_id)
-
-            # Error: Member not found
-            if member is None:
-                await logger.set(
-                    title=":x: Error Registering: Member ID invalid",
-                    color=discord.Color.red(),
-                )
-                await logger.log(f":x: Member ID `{pluralkit_member_id}` was not found")
-                return
-
-            # Error: Missing PluralKit Data
-            if (
-                member["name"] is None
-                or member["avatar_url"] is None
-                or member["proxy_tags"] is None
-            ):
-                await logger.set(
-                    title=":x: Error Registering: Missing PluralKit Data",
-                    color=discord.Color.red(),
-                )
-                if member["name"] is None:
-                    await logger.log(":warning: Member is missing a name")
-                if member["avatar_url"] is None:
-                    await logger.log(":warning: Member is missing an avatar")
-                if member["proxy_tags"] is None:
-                    await logger.log(":warning: Member is missing proxy tags")
-                await logger.log(
-                    "\n:x: *Please check the privacy settings on PluralKit*"
-                )
-                return
-
-            system_name = f"__**{member['name']}**__ (`{member['id']}`)"
-            await logger.edit(
-                -1,
-                f":white_check_mark: Fetched member __**{member['name']}**__ (`{member['id']}`)",
-            )
-
-            # Confirm add
-            confirmation = BotConfirmation(ctx, discord.Color.blue())
-            await confirmation.confirm(
-                f":grey_question: Create member for {account} with member {system_name}?"
-            )
-            if confirmation.confirmed:
-                await confirmation.message.delete()
+            pluralkit_member_ids: list[str]
+            if pluralkit_member_id == "all":
+                members = await pk_get_system_members(str(account.id))
+                pluralkit_member_ids = [member["id"] for member in members]
             else:
-                await confirmation.message.delete()
+                pluralkit_member_ids = [pluralkit_member_id]
+
+            # Error: Duplicate Registration
+
+            duplicates = conn.execute(
+                f"SELECT pk_member_id FROM members WHERE pk_member_id IN ({', '.join([*('?' * len(pluralkit_member_ids))])})",
+                [*pluralkit_member_ids],
+            ).fetchall()
+            non_duplicates = [id for id in pluralkit_member_ids if id not in duplicates]
+
+            if len(non_duplicates) == 0:
                 await logger.set(
-                    title=":x: Registration Cancelled", color=discord.Color.red()
+                    title=":x: Error Registering: Members Already Registered",
+                    color=discord.Color.red(),
                 )
-                await logger.log(":x: Registration cancelled by user")
+                await logger.log(
+                    f":x: All members ({pluralkit_member_ids}) already registered"
+                )
                 return
 
-            # Check if user is new to Polyphony
-            if (
-                conn.execute(
-                    "SELECT * FROM users WHERE id = ?", [account.id]
-                ).fetchone()
-                is None
-            ):
+            instances: list[PolyphonyInstance] = []
+
+            for member_id in non_duplicates:
+                member = await pk_get_member(member_id)
+
+                # Error: Member not found
+                if member is None:
+                    await logger.set(
+                        title=":x: Error Registering: Member ID invalid",
+                        color=discord.Color.red(),
+                    )
+                    await logger.log(f":x: Member ID `{pluralkit_member_id}` was not found")
+                    return
+
+                # Error: Missing PluralKit Data
+                if (
+                    member["name"] is None
+                    or member["avatar_url"] is None
+                    or member["proxy_tags"] is None
+                ):
+                    await logger.set(
+                        title=":x: Error Registering: Missing PluralKit Data",
+                        color=discord.Color.red(),
+                    )
+                    if member["name"] is None:
+                        await logger.log(":warning: Member is missing a name")
+                    if member["avatar_url"] is None:
+                        await logger.log(":warning: Member is missing an avatar")
+                    if member["proxy_tags"] is None:
+                        await logger.log(":warning: Member is missing proxy tags")
+                    await logger.log(
+                        "\n:x: *Please check the privacy settings on PluralKit*"
+                    )
+                    return
+
+                system_name = f"__**{member['name']}**__ (`{member['id']}`)"
                 await logger.log(
-                    f":tada: {account.mention} is a new user! Registering them with Polyphony"
+                    f":white_check_mark: Fetched member __**{member['name']}**__ (`{member['id']}`)",
                 )
-                conn.execute("INSERT INTO users VALUES (?, NULL, NULL)", [account.id])
+
+                # Confirm add
+                confirmation = BotConfirmation(ctx, discord.Color.blue())
+                await confirmation.confirm(
+                    f":grey_question: Create member for {account} with member {system_name}?"
+                )
+                if confirmation.confirmed:
+                    await confirmation.message.delete()
+                else:
+                    await confirmation.message.delete()
+                    await logger.set(
+                        title=":x: Registration Cancelled", color=discord.Color.red()
+                    )
+                    await logger.log(":x: Registration cancelled by user")
+                    return
+
+                # Check if user is new to Polyphony
+                if (
+                    conn.execute(
+                        "SELECT * FROM users WHERE id = ?", [account.id]
+                    ).fetchone()
+                    is None
+                ):
+                    await logger.log(
+                        f":tada: {account.mention} is a new user! Registering them with Polyphony"
+                    )
+                    conn.execute("INSERT INTO users VALUES (?, NULL, NULL)", [account.id])
+                    conn.commit()
+
+                try:
+                    token = tokens.pop()
+                except IndexError:
+                    await logger.set(
+                        title=":x: Error Registering: No Slots Available",
+                        color=discord.Color.red(),
+                    )
+                    await logger.log(
+                        f":x: No tokens in queue. Run `{self.bot.command_prefix}tokens` for information on how to add more."
+                    )
+                    return
+
+                # Insert member into database
+                await logger.log(":hourglass: Adding to database...")
+                try:
+                    insert_member(
+                        token["token"],
+                        member["id"],
+                        account.id,
+                        decode_token(token["token"]),
+                        member["name"],
+                        member["display_name"],
+                        member["avatar_url"],
+                        member["proxy_tags"],
+                        member["keep_proxy"],
+                        member_enabled=True,
+                    )
+                    await logger.edit(-1, ":white_check_mark: Added to database")
+
+                # Error: Database Error
+                except sqlite3.Error as e:
+                    log.error(e)
+                    await logger.set(
+                        title=":x: Error Registering: Database Error",
+                        color=discord.Color.red(),
+                    )
+                    await logger.edit(-1, ":x: An unknown database error occurred")
+                    return
+
+                # Mark token as used
+                conn.execute(
+                    "UPDATE tokens SET used = 1 WHERE token = ?",
+                    [token["token"]],
+                )
                 conn.commit()
 
-            # Insert member into database
-            await logger.log(":hourglass: Adding to database...")
-            try:
-                insert_member(
-                    token["token"],
-                    member["id"],
-                    account.id,
-                    decode_token(token["token"]),
-                    member["name"],
-                    member["display_name"],
-                    member["avatar_url"],
-                    member["proxy_tags"],
-                    member["keep_proxy"],
-                    member_enabled=True,
+                # Create Instance
+                await logger.log(":hourglass: Syncing Instance...")
+                instance = PolyphonyInstance(pluralkit_member_id)
+                instances.append(instance)
+                asyncio.run_coroutine_threadsafe(
+                    instance.start(token["token"]), self.bot.loop
                 )
-                await logger.edit(-1, ":white_check_mark: Added to database")
+                await instance.wait_until_ready()
 
-            # Error: Database Error
-            except sqlite3.Error as e:
-                log.error(e)
-                await logger.set(
-                    title=":x: Error Registering: Database Error",
-                    color=discord.Color.red(),
-                )
-                await logger.edit(-1, ":x: An unknown database error occurred")
-                return
+                sync_error_text = ""
 
-            # Mark token as used
-            conn.execute(
-                "UPDATE tokens SET used = 1 WHERE token = ?",
-                [token["token"]],
-            )
-            conn.commit()
+                # Update Username
+                await logger.edit(-1, f":hourglass: Syncing Username...")
+                out = await instance.update_username(member["name"])
+                if out != 0:
+                    sync_error_text += f"> {out}\n"
 
-            # Create Instance
-            await logger.log(":hourglass: Syncing Instance...")
-            instance = PolyphonyInstance(pluralkit_member_id)
-            asyncio.run_coroutine_threadsafe(
-                instance.start(token["token"]), self.bot.loop
-            )
-            await instance.wait_until_ready()
+                # Update Avatar URL
+                await logger.edit(-1, f":hourglass: Syncing Avatar...")
+                out = await instance.update_avatar(member["avatar_url"])
+                if out != 0:
+                    sync_error_text += f"> {out}\n"
 
-            sync_error_text = ""
+                # Update Nickname
+                await logger.edit(-1, f":hourglass: Syncing Nickname...")
+                out = await instance.update_nickname(member["display_name"])
+                if out < 0:
+                    sync_error_text += f"> PluralKit display name must be 32 or fewer in length if you want to use it as a nickname"
+                elif out > 0:
+                    sync_error_text += f"> Nick didn't update on {out} guild(s)\n"
 
-            # Update Username
-            await logger.edit(-1, f":hourglass: Syncing Username...")
-            out = await instance.update_username(member["name"])
-            if out != 0:
-                sync_error_text += f"> {out}\n"
+                # Update Roles
+                await logger.edit(-1, f":hourglass: Updating Roles...")
+                out = await instance.update_default_roles()
+                if out:
+                    sync_error_text += f"> {out}\n"
 
-            # Update Avatar URL
-            await logger.edit(-1, f":hourglass: Syncing Avatar...")
-            out = await instance.update_avatar(member["avatar_url"])
-            if out != 0:
-                sync_error_text += f"> {out}\n"
-
-            # Update Nickname
-            await logger.edit(-1, f":hourglass: Syncing Nickname...")
-            out = await instance.update_nickname(member["display_name"])
-            if out < 0:
-                sync_error_text += f"> PluralKit display name must be 32 or fewer in length if you want to use it as a nickname"
-            elif out > 0:
-                sync_error_text += f"> Nick didn't update on {out} guild(s)\n"
-
-            # Update Roles
-            await logger.edit(-1, f":hourglass: Updating Roles...")
-            out = await instance.update_default_roles()
-            if out:
-                sync_error_text += f"> {out}\n"
-
-            if sync_error_text == "":
-                await logger.edit(-1, ":white_check_mark: Synced instance")
-            else:
-                await logger.edit(-1, ":warning: Synced instance with errors:")
-                await logger.log(sync_error_text)
+                if sync_error_text == "":
+                    await logger.edit(-1, ":white_check_mark: Synced instance")
+                else:
+                    await logger.edit(-1, ":warning: Synced instance with errors:")
+                    await logger.log(sync_error_text)
 
         # Success State
         logger.content = []
         await logger.set(
-            title=f":white_check_mark: Registered __{member['name']}__",
+            title=f":white_check_mark: Registered __{', '.join(pluralkit_member_ids)}__",
             color=discord.Color.green(),
         )
 
         slots = conn.execute("SELECT * FROM tokens WHERE used = 0").fetchall()
-        await logger.log(f":arrow_forward: **User is {instance.user.mention}**")
+        await logger.log(f":arrow_forward: **Users: {', '.join([i.user.mention for i in instances])}**")
         if sync_error_text != "":
             await logger.log(":warning: Synced instance with errors:")
             await logger.log(sync_error_text)
         await logger.log(f"*There are now {len(slots)} slots available*")
-        log.info(
-            f"{instance.user} ({instance.pk_member_id}): New member instance registered ({len(slots)} slots left)"
-        )
-        await instance.close()
+        for instance in instances:
+            log.info(
+                f"{instance.user} ({instance.pk_member_id}): New member instance registered ({len(slots)} slots left)"
+            )
+            await instance.close()
 
     @commands.group()
     @commands.check_any(commands.is_owner(), is_mod())
