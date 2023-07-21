@@ -1,10 +1,14 @@
 -- Schema Version 3
 
 -- Rename account columns to something more descriptive
-ALTER TABLE members RENAME COLUMN discord_account_id TO main_account_id;
-ALTER TABLE members RENAME COLUMN member_account_id TO id;
-ALTER TABLE users RENAME COLUMN discord_account_id TO id;
+ALTER TABLE members
+    RENAME COLUMN discord_account_id TO main_account_id;
+ALTER TABLE members
+    RENAME COLUMN member_account_id TO id;
+ALTER TABLE users
+    RENAME COLUMN discord_account_id TO id;
 
 -- Set Database Version
 DELETE FROM meta;
-INSERT INTO meta VALUES (3);
+INSERT INTO meta
+VALUES (3);

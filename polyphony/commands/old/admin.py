@@ -201,61 +201,6 @@ class Admin(commands.Cog):
             )
 
     @commands.command()
-    @commands.check_any(commands.is_owner(), is_mod())
-    async def disable(self, ctx: commands.context, system_member: discord.Member):
-        """
-        Disables a system member permanently by deleting it from the database and kicking it from the server. Bot token cannot be reused.
-
-        :param ctx: Discord Context
-        :param system_member: System Member
-        """
-        await ctx.message.delete()
-        member = conn.execute(
-            "SELECT * FROM members WHERE id = ?",
-            [system_member.id],
-        ).fetchone()
-        if member is not None:
-            log.debug(f"Disabling {system_member}")
-            confirmation = BotConfirmation(ctx, discord.Color.red())
-            await confirmation.confirm(
-                f"Disable member __{system_member}__ **permanently?**"
-            )
-            if confirmation.confirmed:
-                await confirmation.message.delete()
-                conn.execute(
-                    "DELETE FROM members WHERE id = ?",
-                    [system_member.id],
-                )
-                conn.commit()
-                await ctx.send(
-                    embed=discord.Embed(
-                        description=f":ballot_box_with_check: {system_member.mention} **permanently disabled** by {ctx.author.mention}",
-                        color=discord.Color.dark_green(),
-                    )
-                )
-                log.info(
-                    f"{system_member} has been permanently by {ctx.message.author}"
-                )
-            else:
-                await confirmation.message.delete()
-                await ctx.send(
-                    embed=discord.Embed(
-                        description=f":information_source: {system_member.mention} was __not__ disabled",
-                        color=discord.Color.blue(),
-                    ),
-                    delete_after=10,
-                )
-                log.info(f"{system_member} not disabled")
-        else:
-            await ctx.send(
-                embed=discord.Embed(
-                    description=f":x: {system_member.mention} not found in database",
-                    color=discord.Color.red(),
-                ),
-                delete_after=10,
-            )
-
-    @commands.command()
     async def tokens(self, ctx: commands.context, *tokens: str):
         """
         Add tokens to queue

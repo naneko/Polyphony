@@ -127,7 +127,7 @@ class Register(commands.Cog):
             )
             await view.wait()
             if view.value is None:
-                interaction.response.edit_message(
+                await interaction.response.edit_message(
                     embed=discord.Embed(
                         title=":x: Registration timed out",
                         description=f"User took too long to respond",
@@ -137,20 +137,20 @@ class Register(commands.Cog):
                 )
                 return
             elif view.value:
-                interaction.response.edit_message(
+                await interaction.response.edit_message(
                     embed=discord.Embed(
                         title=":hourglass: Registering...",
                         description=f"Registering __**{member['name']}**__ (`{member['id']}`) for {account.mention}",
-                        color=discord.Color.red(),
+                        color=discord.Color.blue(),
                     ),
                     view=None,
                 )
             else:
-                interaction.response.edit_message(
+                await interaction.response.edit_message(
                     embed=discord.Embed(
                         title=":x: Cancelled",
                         description=f"Registration of __**{member['name']}**__ (`{member['id']}`) for {account.mention} cancelled by user",
-                        color=discord.Color.red(),
+                        color=discord.Color.blue(),
                     ),
                     view=None,
                 )

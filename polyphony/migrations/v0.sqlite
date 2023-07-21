@@ -3,45 +3,51 @@ PRAGMA foreign_keys = ON;
 -- Schema Version 0
 
 -- Database Metadata
-CREATE TABLE IF NOT EXISTS meta (
+CREATE TABLE IF NOT EXISTS meta
+(
     version INTEGER PRIMARY KEY
 );
 
 -- Stores Polyphony Users
-CREATE TABLE IF NOT EXISTS users (
-    discord_account_id  INTEGER PRIMARY KEY
+CREATE TABLE IF NOT EXISTS users
+(
+    discord_account_id INTEGER PRIMARY KEY
 );
 
 -- Stores Polyphony/PluralKit Members
-CREATE TABLE IF NOT EXISTS members (
-    token               TEXT    PRIMARY KEY, -- Discord Bot Token
-    pk_member_id        TEXT    NOT NULL UNIQUE,
-    discord_account_id  INTEGER NOT NULL,
-    member_account_id   INTEGER NOT NULL UNIQUE,
-    member_name         TEXT    NOT NULL,
-    display_name        TEXT,
-    pk_avatar_url       TEXT    NOT NULL,
-    pk_proxy_tags       TEXT    NOT NULL,
-    pk_keep_proxy       INT     NOT NULL CHECK(pk_keep_proxy == 1 OR pk_keep_proxy == 0), -- BOOL
-    member_enabled      INT     NOT NULL CHECK(pk_keep_proxy == 1 OR pk_keep_proxy == 0), -- BOOL
+CREATE TABLE IF NOT EXISTS members
+(
+    token              TEXT PRIMARY KEY,                                                  -- Discord Bot Token
+    pk_member_id       TEXT    NOT NULL UNIQUE,
+    discord_account_id INTEGER NOT NULL,
+    member_account_id  INTEGER NOT NULL UNIQUE,
+    member_name        TEXT    NOT NULL,
+    display_name       TEXT,
+    pk_avatar_url      TEXT    NOT NULL,
+    pk_proxy_tags      TEXT    NOT NULL,
+    pk_keep_proxy      INT     NOT NULL CHECK (pk_keep_proxy == 1 OR pk_keep_proxy == 0), -- BOOL
+    member_enabled     INT     NOT NULL CHECK (pk_keep_proxy == 1 OR pk_keep_proxy == 0), -- BOOL
 
-    FOREIGN KEY(discord_account_id) REFERENCES users(discord_account_id)
-    FOREIGN KEY(token) REFERENCES tokens(token)
+    FOREIGN KEY (discord_account_id) REFERENCES users (discord_account_id)
+        FOREIGN KEY (token) REFERENCES tokens(token)
 );
 
 -- All Available Tokens
-CREATE TABLE IF NOT EXISTS tokens (
-    token               TEXT    PRIMARY KEY,
-    used                INT     NOT NULL CHECK(used == 1 OR used == 0) -- BOOL
+CREATE TABLE IF NOT EXISTS tokens
+(
+    token TEXT PRIMARY KEY,
+    used  INT NOT NULL CHECK (used == 1 OR used == 0) -- BOOL
 );
 
 -- All Available Roles
-CREATE TABLE IF NOT EXISTS roles (
-    role_name           TEXT    NOT NULL UNIQUE,
-    role_id             TEXT    PRIMARY KEY,
-    id                  INT     NOT NULL -- Determines order in list
+CREATE TABLE IF NOT EXISTS roles
+(
+    role_name TEXT NOT NULL UNIQUE,
+    role_id   TEXT PRIMARY KEY,
+    id        INT  NOT NULL -- Determines order in list
 );
 
 -- Set Database Version
 DELETE FROM meta;
-INSERT INTO meta VALUES (0);
+INSERT INTO meta
+VALUES (0);

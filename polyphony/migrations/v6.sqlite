@@ -1,0 +1,82 @@
+-- Schema Version 6
+
+-- Create Guild table
+CREATE TABLE guilds
+(
+    id                          INTEGER PRIMARY KEY,
+    moderator_roles             TEXT,
+    always_add_roles            TEXT,
+    always_remove_roles         TEXT,
+    always_sync_roles           TEXT,
+    never_sync_roles            TEXT,
+    disable_rolesync_roles      TEXT,
+    instance_invite_permissions TEXT,
+    logging_channel             INTEGER
+);
+
+-- Add Token Guild Column
+CREATE TABLE IF NOT EXISTS tokens_tmp
+(
+    token TEXT PRIMARY KEY,
+    used  INT NOT NULL CHECK (used == 1 OR used == 0), -- BOOL
+    guild INT NOT NULL DEFAULT 0, -- TODO: Add 2.0 updater into database.py to handle this so guild value can be applied from GUILD_ID configuration
+
+    FOREIGN KEY (guild) REFERENCES guilds (id)
+);
+insert into tokens_tmp(token, used)
+select token, used
+from tokens;
+drop table tokens;
+alter table tokens_tmp
+    rename to tokens;
+
+-- Delete unused roles table
+DROP TABLE roles;
+
+-- Get rid of unique constraint on pk_member_id
+-- Add guild column to members table
+create table members_dg_tmp
+(
+    token           TEXT
+        references tokens,
+    pk_member_id    TEXT    not null,
+    main_account_id INTEGER not null,
+    id              INTEGER
+        primary key,
+    member_name     TEXT    not null,
+    display_name    TEXT,
+    pk_avatar_url   TEXT,
+    pk_proxy_tags   TEXT    not null,
+    pk_keep_proxy   INT     not null,
+    member_enabled  INT     not null,
+    nickname        TEXT,
+    check (pk_keep_proxy == 1 OR pk_keep_proxy == 0),
+    check (pk_keep_proxy == 1 OR pk_keep_proxy == 0),
+    guild           INTEGER not null DEFAULT 0, -- TODO: Add 2.0 updater into database.py to handle this so guild value can be applied from GUILD_ID configuration
+
+    FOREIGN KEY (main_account_id) REFERENCES users (id),
+    FOREIGN KEY (token) REFERENCES tokens (token),
+    FOREIGN KEY (guild) REFERENCES guilds (id)
+);
+insert into members_dg_tmp(token, pk_member_id, main_account_id, id, member_name, display_name, pk_avatar_url,
+                           pk_proxy_tags, pk_keep_proxy, member_enabled, nickname)
+select token,
+       pk_member_id,
+       main_account_id,
+       id,
+       member_name,
+       display_name,
+       pk_avatar_url,
+       pk_proxy_tags,
+       pk_keep_proxy,
+       member_enabled,
+       nickname
+from members;
+drop table members;
+alter table members_dg_tmp
+    rename to members;
+
+-- Set Database Version
+DELETE FROM meta;
+INSERT INTO meta;
+VALUES (6);
